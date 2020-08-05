@@ -27,12 +27,12 @@ nav:
   - Primary abstractions: overview/abstractions.md
   - Defining an experiment: overview/defining-an-experiment.md
 - Tutorials:
-  - Basics:
-    - Changing rewards and losses: tutorials/changing-rewards-and-losses.md
-    - Defining a new model: tutorials/defining-a-new-model.md
-    - Defining a new Task: tutorials/defining-a-new-task.md
-    - Third-party environments (MiniGrid): tutorials/minigrid-tutorial.md
-  #   - Defining a new TaskSampler: tutorials/defining-a-new-task.md # TODO
+  - Third-party environments (MiniGrid): tutorials/minigrid-tutorial.md
+  - Training a PointNav model in RoboTHOR: tutorials/training-a-pointnav-model.md
+  - Training a PointNav model in iTHOR or Habitat: tutorials/transfering-to-a-different-environment-framework.md
+  - Changing rewards and losses: tutorials/changing-rewards-and-losses.md
+  - Defining a new model: tutorials/defining-a-new-model.md
+  - Defining a new Task: tutorials/defining-a-new-task.md
 - Projects using embodied-ai:
   - BabyAI Baselines: projects/babyai_baselines/README.md
 - Roadmap: ROADMAP.md
@@ -81,6 +81,10 @@ nav:
     - vector_sampled_tasks: api/onpolicy_sync/vector_sampled_tasks.md
     - storage: api/onpolicy_sync/storage.md
   - projects:
+    - framework_transfer_tutorial:
+      - experiments:
+        - pointnav_habitat_rgb_ddppo: api/projects/framework_transfer_tutorial/experiments/pointnav_habitat_rgb_ddppo.md
+        - pointnav_ithor_rgb_ddppo: api/projects/framework_transfer_tutorial/experiments/pointnav_ithor_rgb_ddppo.md
     - objectnav_baselines:
       - experiments:
         - robothor:

@@ -34,8 +34,7 @@ We have designed `embodied-ai` to easily support a wide variety of tasks designe
  
 ## Installation
 
-Begin by cloning this repository to your local machine and moving into the top-level directory
-REDACTED FOR DOUBLE-BLIND REVIEW
+Begin by cloning this repository to your local machine and moving into the top-level directory.
 This library has been tested **only in python 3.6**, the following assumes you have a working version of **python 3.6** installed locally. In order to install requirements we recommend using [`pipenv`](https://pipenv.kennethreitz.org/en/latest/) but also include instructions if you would prefer to install things directly using `pip`.
 
 ### Installing requirements with `pipenv` (*recommended*)
