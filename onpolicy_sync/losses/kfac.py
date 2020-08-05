@@ -12,12 +12,6 @@ import torch.optim as optim
 from rl_base.distributions import AddBias
 
 
-# TODO: In order to make this code faster:
-# 1) Implement _extract_patches as a single cuda kernel
-# 2) Compute QR decomposition in a separate process
-# 3) Actually make a general KFAC optimizer so it fits PyTorch
-
-
 def _extract_patches(x, kernel_size, stride, padding):
     if padding[0] + padding[1] > 0:
         x = F.pad(

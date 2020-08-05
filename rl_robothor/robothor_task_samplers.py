@@ -69,7 +69,6 @@ class ObjectNavTaskSampler(TaskSampler):
             )
             with open(self.scenes, "r") as f:
                 self.dataset_episodes = json.load(f)
-                # get_logger().debug("Loaded {} object nav episodes".format(len(self.dataset_episodes)))
             self.dataset_first = dataset_first if dataset_first >= 0 else 0
             self.dataset_last = (
                 dataset_last if dataset_last >= 0 else len(self.dataset_episodes) - 1
@@ -80,7 +79,6 @@ class ObjectNavTaskSampler(TaskSampler):
                 dataset_last, dataset_first
             )
             self.reset_tasks = self.dataset_last - self.dataset_first + 1
-            # get_logger().debug("{} tasks ({}, {}) in sampler".format(self.reset_tasks, self.dataset_first, self.dataset_last))
 
         self._last_sampled_task: Optional[ObjectNavTask] = None
 
@@ -170,12 +168,6 @@ class ObjectNavTaskSampler(TaskSampler):
 
         return self.scenes[int(self.scene_order[self.scene_id])]
 
-    # def sample_episode(self, scene):
-    #     self.scene_counters[scene] = (self.scene_counters[scene] + 1) % len(self.scene_to_episodes[scene])
-    #     if self.scene_counters[scene] == 0:
-    #         random.shuffle(self.scene_to_episodes[scene])
-    #     return self.scene_to_episodes[scene][self.scene_counters[scene]]
-
     def next_task(self, force_advance_scene: bool = False) -> Optional[ObjectNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             # get_logger().debug("max_tasks {}".format(self.max_tasks))
@@ -251,15 +243,10 @@ class ObjectNavTaskSampler(TaskSampler):
 
             self.max_tasks -= 1
 
-        # task_info["actions"] = []  # TODO populated by Task(Generic[EnvType]).step(...) but unused
-
         if self.allow_flipping and random.random() > 0.5:
             task_info["mirrored"] = True
         else:
             task_info["mirrored"] = False
-
-        # if self.reset_tasks is not None:
-        #     get_logger().debug("eval task_info {}".format(task_info))
 
         self._last_sampled_task = ObjectNavTask(
             env=self.env,
@@ -494,8 +481,6 @@ class PointNavTaskSampler(TaskSampler):
     def __init__(
         self,
         scenes: List[str],
-        # object_types: List[str],
-        # scene_to_episodes: List[Dict[str, Any]],
         sensors: List[Sensor],
         max_steps: int,
         env_args: Dict[str, Any],
@@ -512,10 +497,6 @@ class PointNavTaskSampler(TaskSampler):
         self.rewards_config = rewards_config
         self.env_args = env_args
         self.scenes = scenes
-        # self.object_types = object_types
-        # self.scene_to_episodes = scene_to_episodes
-        # self.scene_counters = {scene: -1 for scene in self.scene_to_episodes}
-        # self.scenes = list(self.scene_to_episodes.keys())
         self.env: Optional[RoboThorEnvironment] = None
         self.sensors = sensors
         self.max_steps = max_steps
@@ -557,10 +538,6 @@ class PointNavTaskSampler(TaskSampler):
 
     @property
     def total_unique(self) -> Optional[Union[int, float]]:
-        # total = 0
-        # for scene in self.scene_to_episodes:
-        #     total += len(self.scene_to_episodes[scene])
-        # return total
         return self.reset_tasks
 
     @property
@@ -623,12 +600,6 @@ class PointNavTaskSampler(TaskSampler):
 
         return self.scenes[int(self.scene_order[self.scene_id])]
 
-    # def sample_episode(self, scene):
-    #     self.scene_counters[scene] = (self.scene_counters[scene] + 1) % len(self.scene_to_episodes[scene])
-    #     if self.scene_counters[scene] == 0:
-    #         random.shuffle(self.scene_to_episodes[scene])
-    #     return self.scene_to_episodes[scene][self.scene_counters[scene]]
-
     def next_task(self, force_advance_scene: bool = False) -> Optional[PointNavTask]:
         if self.max_tasks is not None and self.max_tasks <= 0:
             return None
@@ -644,12 +615,7 @@ class PointNavTaskSampler(TaskSampler):
             self.env = self._create_environment()
             self.env.reset(scene_name=scene)
 
-        # task_info = copy.deepcopy(self.sample_episode(scene))
-        # task_info['target'] = task_info['target_position']
-        # task_info['actions'] = []
-
         locs = self.env.known_good_locations_list()
-        # get_logger().debug("locs[0] {} locs[-1] {}".format(locs[0], locs[-1]))
 
         ys = [loc["y"] for loc in locs]
         miny = min(ys)
@@ -678,12 +644,6 @@ class PointNavTaskSampler(TaskSampler):
 
         if cond:
             get_logger().warning("No path for sampled episode {}".format(task_info))
-        # else:
-        #     get_logger().debug("Path found for sampled episode {}".format(task_info))
-
-        # pose = {**task_info['initial_position'], 'rotation': {'x': 0.0, 'y': task_info['initial_orientation'], 'z': 0.0}, 'horizon': 0.0}
-        # self.env.step({"action": "TeleportFull", **pose})
-        # assert self.env.last_action_success, "Failed to initialize agent to {} in {} for epsiode {}".format(pose, scene, task_info)
 
         self._last_sampled_task = PointNavTask(
             env=self.env,
@@ -701,11 +661,6 @@ class PointNavTaskSampler(TaskSampler):
         random.shuffle(self.scene_order)
         self.scene_id = 0
         self.max_tasks = self.reset_tasks
-
-        # for scene in self.scene_to_episodes:
-        #     random.shuffle(self.scene_to_episodes[scene])
-        # for scene in self.scene_counters:
-        #     self.scene_counters[scene] = -1
 
     def set_seed(self, seed: int):
         self.seed = seed

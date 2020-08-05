@@ -38,6 +38,5 @@ class AbstractActorCriticLoss(Loss):
         A (0-dimensional) torch.FloatTensor corresponding to the computed loss. `.backward()` will be called on this
         tensor in order to compute a gradient update to the ActorCriticModel's parameters.
         """
-        # TODO: The above documentation is missing what the batch dimensions are.
 
         raise NotImplementedError()

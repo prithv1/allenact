@@ -46,12 +46,11 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self.episode_optimal_corners = episode_info["shortest_path"]
             dist = episode_info["shortest_path_length"]
         else:
-            self.episode_optimal_corners = self.env.path_corners(
-                task_info["target"]
+            self.episode_optimal_corners = list(
+                self.env.path_corners(task_info["target"])
             )  # assume it's valid (sampler must take care)!
             dist = self.env.path_corners_to_dist(self.episode_optimal_corners)
         if dist == float("inf"):
-            dist = -1.0  # -1.0 for unreachable
             get_logger().warning(
                 "No path for {} from {} to {}".format(
                     self.env.scene_name, self.env.agent_state(), task_info["target"]
@@ -71,9 +70,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        self.path = (
-            []
-        )  # the initial coordinate will be directly taken from the optimal path
+        self.path = []
         self.num_moves_made = 0
 
     @property
@@ -214,9 +211,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     self.task_info["target"],
                 )
             else:
-                # TODO
                 raise NotImplementedError
-                # dist2tget = self._get_distance_to_target()
             if dist2tget is None:
                 return {}
 
@@ -254,7 +249,6 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._took_end_action: bool = False
         self._success: Optional[bool] = False
         self.mirror = task_info["mirrored"]
-        # self.last_geodesic_distance = task_info["distance_to_target"] if task_info["distance_to_target"] else None
         self.distance_cache = distance_cache
         if self.distance_cache:
             self.last_geodesic_distance = get_distance_to_object(
@@ -269,17 +263,13 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self._rewards = []
         self._distance_to_goal = []
         self._metrics = None
-        self.path = (
-            []
-        )  # the initial coordinate will be directly taken from the optimal path
+        self.path = []
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["taken_actions"] = []
         self.task_info["action_names"] = self.action_names()
 
         if not task_info["distance_to_target"]:
-            self.episode_optimal_corners = self.env.path_corners(
-                task_info["target"]
-            )  # assume it's valid (sampler must take care)!
+            self.episode_optimal_corners = self.env.path_corners(task_info["target"])
         self.num_moves_made = 0
         self.optimal_distance = self.last_geodesic_distance
 
@@ -335,8 +325,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         elif mode == "depth":
             frame = self.env.current_depth.copy()
         if self.mirror:
-            frame = frame[:, ::-1, :].copy()  # horizontal flip
-            # print("mirrored render")
+            frame = frame[:, ::-1, :].copy()
         return frame
 
     def _is_goal_in_range(self) -> bool:
@@ -359,9 +348,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             )
         else:
             geodesic_distance = self.env.dist_to_object(self.task_info["object_type"])
-        if (
-            self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5
-        ):  # (robothor limits)
+        if self.last_geodesic_distance > -0.5 and geodesic_distance > -0.5:
             rew += self.last_geodesic_distance - geodesic_distance
         self.last_geodesic_distance = geodesic_distance
 
@@ -401,12 +388,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         if self.mirror:
             for o in obs:
                 if ("rgb" in o or "depth" in o) and isinstance(obs[o], np.ndarray):
-                    if (
-                        len(obs[o].shape) == 3
-                    ):  # heuristic to determine this is a visual sensor
-                        obs[o] = obs[o][:, ::-1, :].copy()  # horizontal flip
-                    elif len(obs[o].shape) == 2:  # perhaps only two axes for depth?
-                        obs[o] = obs[o][:, ::-1].copy()  # horizontal flip
+                    if len(obs[o].shape) == 3:
+                        obs[o] = obs[o][:, ::-1, :].copy()
+                    elif len(obs[o].shape) == 2:
+                        obs[o] = obs[o][:, ::-1].copy()
         return obs
 
     def metrics(self) -> Dict[str, Any]:
@@ -417,9 +402,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 self.task_info["object_type"],
             )
         else:
-            # TODO
             raise NotImplementedError
-            # dist2tget = self._get_distance_to_target()
         if not self.is_done():
             return {}
         else:

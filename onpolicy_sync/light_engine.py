@@ -210,12 +210,10 @@ class OnPolicyRLEngine(object):
         self.training_pipeline: Optional[TrainingPipeline] = None
 
     @property
-    def vector_tasks(self, debug=False):  # TODO debug
+    def vector_tasks(self):
         if self._vector_tasks is None and self.num_samplers > 0:
             if self.is_distributed:
-                total_processes = sum(
-                    self.num_samplers_per_worker
-                )  # TODO this will break the fixed seed for multi-device test
+                total_processes = sum(self.num_samplers_per_worker)
             else:
                 total_processes = self.num_samplers
 
@@ -280,7 +278,7 @@ class OnPolicyRLEngine(object):
                 total_processes=total_processes,
                 devices=[self.device]
                 if self.is_distributed or self.mode == "test"
-                else devices,  # TODO is this ever used?!
+                else devices,
                 seeds=seeds,
             )
             for it in range(self.num_samplers)
@@ -473,7 +471,6 @@ class OnPolicyRLEngine(object):
             masks=masks[keep],
         )
 
-        # TODO we always miss tensors for the last action in the last episode of each worker
         if visualizer is not None:
             if len(keep) > 0:
                 visualizer.collect(
@@ -612,7 +609,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         seed = (seed ^ (self.training_pipeline.total_steps + 1)) % (
             2 ** 31 - 1
         )  # same seed for all workers
-        # TODO: fix for distributed test
         if self.mode == "train":
             return self.worker_seeds(self.num_workers, seed)[
                 self.worker_id
@@ -744,7 +740,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         )
 
         if self.is_distributed:
-            # TODO this is inaccurate/hacky, but gets synchronized after each rollout
             approx_steps = (
                 self.step_count - self.former_steps
             ) * self.num_workers + self.former_steps
@@ -830,7 +825,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             )
 
             for bit, batch in enumerate(data_generator):
-                # TODO: check recursively within batch
                 bsize = None
                 for key in batch:
                     if isinstance(batch[key], torch.Tensor):
@@ -893,7 +887,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         )
                     )
                     if self.is_distributed:
-                        # TODO test the hack actually works
                         zero_loss = (
                             (
                                 torch.zeros_like(actor_critic_output.distributions)
@@ -911,16 +904,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         )
                         self.optimizer.step()  # type: ignore
                         self.training_pipeline.backprop_count += 1
-
-        # # TODO Useful for ensuring correctness of distributed infrastructure
-        # target = self.actor_critic.module if self.is_distributed else self.actor_critic
-        # state_dict = target.state_dict()
-        # keys = sorted(list(state_dict.keys()))
-        # get_logger().debug("worker {} param 0 {} param -1 {}".format(
-        #     self.worker_id,
-        #     state_dict[keys[0]].flatten()[0],
-        #     state_dict[keys[-1]].flatten()[-1],
-        # ))
 
     def apply_teacher_forcing(
         self,
@@ -993,7 +976,6 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.collect_rollout_step(rollouts=rollouts)
                 if self.is_distributed:
                     # Preempt stragglers
-                    # TODO: Add a bit more description of his behavior.
                     num_done = int(self.num_workers_done.get("done"))
                     if (
                         num_done

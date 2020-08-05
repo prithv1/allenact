@@ -52,9 +52,6 @@ class BatchedFasterRCNN(torch.nn.Module):
 
         temp = [[[] for _ in range(res)] for _ in range(res)]  # grid of arrays
 
-        # # TODO Debug
-        # print('NEW IMAGE')
-
         for it in range(classes.shape[0]):
             cx = (boxes[it, 0].item() + boxes[it, 2].item()) / 2
             cy = (boxes[it, 1].item() + boxes[it, 3].item()) / 2
@@ -72,9 +69,6 @@ class BatchedFasterRCNN(torch.nn.Module):
                     classes[it].item(),  # class
                 )
             )
-
-            # # TODO Debug:
-            # print(self.COCO_INSTANCE_CATEGORY_NAMES[classes[it].item()])
 
         for py in range(res):
             for px in range(res):
@@ -96,12 +90,6 @@ class BatchedFasterRCNN(torch.nn.Module):
         with torch.no_grad():
             imglist = [im_in.squeeze(0) for im_in in imbatch.split(split_size=1, dim=0)]
 
-            # # TODO Debug
-            # import cv2
-            # for it, im_in in enumerate(imglist):
-            #     cvim = 255.0 * im_in.to('cpu').permute(1, 2, 0).numpy()[:, :, ::-1]
-            #     cv2.imwrite('test_highres{}.png'.format(it), cvim)
-
             preds = self.model(imglist)
 
             keeps = [
@@ -116,7 +104,6 @@ class BatchedFasterRCNN(torch.nn.Module):
             all_classes = [pred["labels"][keep] for pred, keep in zip(preds, keeps)]
             all_pred_scores = [pred["scores"][keep] for pred, keep in zip(preds, keeps)]
 
-            # hack: fill in a full prob score (all classes, 0 score if undetected) for each box, for backwards compatibility
             all_scores = [
                 torch.zeros(pred_scores.shape[0], 91, device=pred_scores.device)
                 for pred_scores in all_pred_scores

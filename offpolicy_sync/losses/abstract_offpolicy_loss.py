@@ -26,6 +26,5 @@ class AbstractOffPolicyLoss(typing.Generic[ModelType], Loss):
     ) -> Tuple[torch.FloatTensor, Dict[str, float], Dict[str, torch.Tensor]]:
         """Computes the loss.
 
-        # TODO: Description of how this works
         """
         raise NotImplementedError()
