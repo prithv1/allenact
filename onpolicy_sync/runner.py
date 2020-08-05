@@ -276,7 +276,7 @@ class OnPolicyRunner(object):
                     config=self.config,
                     results_queue=self.queues["results"],
                     checkpoints_queue=self.queues["checkpoints"],
-                    seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
+                    seed=12345,
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
                     device=device,
@@ -321,7 +321,7 @@ class OnPolicyRunner(object):
                     config=self.config,
                     results_queue=self.queues["results"],
                     checkpoints_queue=self.queues["checkpoints"],
-                    seed=12345,  # TODO allow same order for randomly sampled tasks? Is this any useful anyway?
+                    seed=12345,
                     deterministic_cudnn=self.deterministic_cudnn,
                     mp_ctx=self.mp_ctx,
                     num_workers=num_testers,

@@ -49,7 +49,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ObjectNavRoboThorBaseConfig):
                     "torchvision_resnet_model": models.resnet18,
                     "input_uuids": ["depth_lowres"],
                     "output_uuid": "depth_resnet",
-                    "parallel": False,  # TODO False for debugging
+                    "parallel": False,
                 },
             ),
         ]

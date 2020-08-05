@@ -287,7 +287,6 @@ class AgentViewViz(AbstractViz):
                         "skipping viz for missing episode {}".format(episode_id)
                     )
                     continue
-                # TODO overlay episode id?
                 images.append([step[datum_id] for step in render[episode_id]])
             if len(images) == 0:
                 continue

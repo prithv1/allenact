@@ -67,7 +67,7 @@ class ThorViz(TrajectoryViz):
         )
 
         if isinstance(scenes[0], str):
-            scenes = [scenes]  # make it list of tuples
+            scenes = [scenes]
         self.scenes = scenes
 
         self.room_path = os.path.join(*room_path)
@@ -339,10 +339,7 @@ class ThorViz(TrajectoryViz):
         if self.thor_top_downs is None:
             self.init_top_down_render()
 
-        roomname = "FloorPlan_Val{}_{}".format(
-            *episode_id.split("_")[1:3]
-        )  # TODO HACK due to current episode id not including the full room name
-        # get_logger().debug("episode {} rommname {}".format(episode_id, roomname))
+        roomname = "FloorPlan_Val{}_{}".format(*episode_id.split("_")[1:3])
 
         im = self.visualize_agent_path(
             trajectory,

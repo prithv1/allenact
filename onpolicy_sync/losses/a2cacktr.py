@@ -47,16 +47,12 @@ class A2CACKTR(AbstractActorCriticLoss):
             typing.cast(torch.FloatTensor, batch["returns"]) - values
         ).pow(2)
 
-        # TODO: Decided not to use normalized advantages here,
-        #   is this correct? (it's how it's done in Kostrikov's)
         action_loss = -(
             typing.cast(torch.FloatTensor, batch["adv_targ"]).detach()
             * action_log_probs
         )
 
         if self.acktr:
-            # TODO: Currently acktr doesn't really work because of this natural gradient stuff
-            #   that we should figure out how to integrate properly.
             get_logger().warning("acktr is only partially supported.")
 
         return {
