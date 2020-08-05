@@ -44,15 +44,15 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     SCREEN_SIZE = 224
 
     # Training Engine Parameters
-    ADVANCE_SCENE_ROLLOUT_PERIOD = 10**13
+    ADVANCE_SCENE_ROLLOUT_PERIOD = 10000000000000
     NUM_PROCESSES = 60
     TRAINING_GPUS = [0, 1, 2, 3, 4, 5, 6]
     VALIDATION_GPUS = [7]
     TESTING_GPUS = [7]
 
     # Dataset Parameters
-    TRAIN_DATASET_DIR = "dataset/robothor/objectnav/train"
-    VAL_DATASET_DIR = "dataset/robothor/objectnav/val"
+    TRAIN_DATASET_DIR = "dataset/ithor/objectnav/train"
+    VAL_DATASET_DIR = "dataset/ithor/objectnav/val"
 
     SENSORS = [
         RGBSensorThor(
@@ -77,7 +77,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "torchvision_resnet_model": models.resnet18,
                 "input_uuids": ["rgb_lowres"],
                 "output_uuid": "rgb_resnet",
-                "parallel": False,
+                "parallel": False,  # TODO False for debugging
             },
         ),
     ]
@@ -97,7 +97,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     @classmethod
     def tag(cls):
-        return "PointNavRobothorRGBPPO"
+        return "PointNavithorRGBPPO"
 
     @classmethod
     def training_pipeline(cls, **kwargs):
