@@ -1,14 +1,14 @@
 site_name: embodied-ai
 site_description: a framework for embodied-ai research
-site_url: https://github.com/allenai/embodied-rl
+site_url: https://github.com/REDACTED_ORG/embodied-ai
 
 theme:
   name: material
   palette:
     primary: blue
     accent: grey
-  logo: img/PriorLogo_CircleOnly.svg
-  favicon: img/PriorLogo_CircleOnly.svg
+  logo:
+  favicon:
   highlightjs: true
   hljs_languages:
   - python
@@ -16,8 +16,8 @@ theme:
   - json
 
 
-repo_name: allenai/embodied-rl
-repo_url: https://github.com/allenai/embodied-rl
+repo_name: REDACTED_ORG/embodied-ai
+repo_url: https://github.com/REDACTED_ORG/embodied-ai
 edit_uri: edit/master/docs/
 
 nav:

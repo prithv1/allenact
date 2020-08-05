@@ -1,5 +1,3 @@
-# TODO: @klemenkotar please fix all type errors
-
 from typing import List
 
 import habitat
