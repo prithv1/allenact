@@ -1,3 +1,10 @@
+"""
+[TODO] -- Add functionality to log losses on validation / test as well
+        -- One way is to train deterministically (with mode action) on val
+            with loss coefficients set to zero to avoid backpropagation
+        -- Another way is to intrinsically ensure that losses are taken
+            into account while storing metrics
+"""
 """Defines the reinforcement learning `OnPolicyRLEngine`."""
 import os
 import random
@@ -27,6 +34,8 @@ import torch.optim
 from torch import nn
 from torch import optim
 
+import numpy as np
+from pprint import pprint
 
 from torch.optim.lr_scheduler import _LRScheduler
 
@@ -79,7 +88,7 @@ class OnPolicyRLEngine(object):
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
         distributed_port: int = 0,
-        deterministic_agent: bool = False,
+        deterministic_agents: bool = False,
         max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
     ):
@@ -200,13 +209,44 @@ class OnPolicyRLEngine(object):
             )
             self.is_distributed = True
 
-        self.deterministic_agent = deterministic_agent
+        self.deterministic_agents = deterministic_agents
 
         self.scalars = ScalarMeanTracker()
 
         self._is_closed: bool = False
 
         self.training_pipeline: Optional[TrainingPipeline] = None
+
+        # Inverse Dynamics and Rotation Prediction Mode
+        try:
+            self.inv_mode = self.actor_critic.inv_mode
+        except AttributeError:
+            self.inv_mode = False
+            print("Actor critic model has no attribute inverse mode")
+
+        try:
+            self.rot_mode = self.actor_critic.rot_mode
+        except AttributeError:
+            self.rot_mode = False
+            print("Actor critic model has no attribute rotation mode")
+
+        try:
+            self.fwd_mode = self.actor_critic.fwd_mode
+        except AttributeError:
+            self.fwd_mode = False
+            print("Actor critic model has no attribute forward mode")
+
+        try:
+            self.td_mode = self.actor_critic.td_mode
+        except AttributeError:
+            self.td_mode = False
+            print("Actor critic model has no attribute TD mode")
+
+        try:
+            self.feat_random_mode = self.actor_critic.feat_random_mode
+        except AttributeError:
+            self.feat_random_mode = False
+            print("Actor critic model has no attribute feat-random mode")
 
     @property
     def vector_tasks(self):
@@ -363,7 +403,11 @@ class OnPolicyRLEngine(object):
             ):
                 continue
             self.scalars.add_scalars(
-                {k: v for k, v in task_output.items() if k != "task_info"}
+                {
+                    k: v
+                    for k, v in task_output.items()
+                    if k != "task_info" and k != "ep_rewards"
+                }
             )
             nsamples += 1
 
@@ -426,7 +470,7 @@ class OnPolicyRLEngine(object):
 
         actions = (
             actor_critic_output.distributions.sample()
-            if not self.deterministic_agent
+            if not self.deterministic_agents
             else actor_critic_output.distributions.mode()
         )
 
@@ -563,7 +607,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
         num_workers: int = 1,
         device: Union[str, torch.device, int] = "cpu",
         distributed_port: int = 0,
-        deterministic_agent: bool = False,
+        deterministic_agents: bool = False,
         distributed_preemption_threshold: float = 0.7,
         max_sampler_processes_per_worker: Optional[int] = None,
         **kwargs,
@@ -582,7 +626,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             num_workers=num_workers,
             device=device,
             distributed_port=distributed_port,
-            deterministic_agent=deterministic_agent,
+            deterministic_agents=deterministic_agents,
             max_sampler_processes_per_worker=max_sampler_processes_per_worker,
             **kwargs,
         )
@@ -847,6 +891,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 advantages, self.training_pipeline.num_mini_batch
             )
 
+            epoch_level_info = {}
+
             for bit, batch in enumerate(data_generator):
                 # masks is always [steps, samplers, agents, 1]:
                 num_rollout_steps, num_samplers = batch["masks"].shape[:2]
@@ -857,7 +903,37 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     memory=batch["memory"],
                     prev_actions=batch["prev_actions"],
                     masks=batch["masks"],
+                    actions=batch["actions"],
                 )
+
+                pred_action_logits = None
+                if self.inv_mode:
+                    pred_action_logits = actor_critic_output.extras[
+                        "pred_action_logits"
+                    ]
+
+                next_state, next_state_pred = None, None
+                if self.fwd_mode:
+                    next_state_pred = actor_critic_output.extras["next_state_pred"]
+                    next_state = actor_critic_output.extras["next_state"]
+
+                pred_rotation_logits = None
+                if self.rot_mode:
+                    pred_rotation_logits = actor_critic_output.extras[
+                        "pred_rotation_logits"
+                    ]
+
+                td_preds, td_pair_target = None, None
+                if self.td_mode:
+                    td_preds = actor_critic_output.extras["td_preds"]
+                    td_pair_target = actor_critic_output.extras["td_pair_target"]
+
+                rnn_hidden_states, fwd_rnn_hidden_states = None, None
+                if self.feat_random_mode:
+                    rnn_hidden_states = actor_critic_output.extras["rnn_hidden_states"]
+                    fwd_rnn_hidden_states = actor_critic_output.extras[
+                        "fwd_rnn_hidden_states"
+                    ]
 
                 info: Dict[str, float] = {}
 
@@ -874,6 +950,14 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         step_count=self.step_count,
                         batch=batch,
                         actor_critic_output=actor_critic_output,
+                        pred_action_logits=pred_action_logits,
+                        pred_rotation_logits=pred_rotation_logits,
+                        next_state=next_state,
+                        next_state_pred=next_state_pred,
+                        td_preds=td_preds,
+                        td_pair_target=td_pair_target,
+                        rnn_hidden_states=rnn_hidden_states,
+                        fwd_rnn_hidden_states=fwd_rnn_hidden_states,
                     )
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
@@ -882,6 +966,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
 
                     for key in current_info:
                         info[loss_name + "/" + key] = current_info[key]
+
+                    for key in current_info:
+                        if loss_name + "/" + key not in epoch_level_info:
+                            epoch_level_info[loss_name + "/" + key] = []
+                        epoch_level_info[loss_name + "/" + key] = current_info[key]
 
                 assert (
                     total_loss is not None
@@ -893,6 +982,11 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                 self.tracking_info["update"].append(("update_package", info, bsize))
 
                 self.backprop_step(total_loss)
+
+        for k, v in epoch_level_info.items():
+            epoch_level_info[k] = np.mean(v)
+
+        # pprint(epoch_level_info)
 
         # # TODO Unit test to ensure correctness of distributed infrastructure
         # state_dict = self.actor_critic.state_dict()
@@ -1311,7 +1405,7 @@ class OnPolicyInference(OnPolicyRLEngine):
         deterministic_cudnn: bool = False,
         mp_ctx: Optional[BaseContext] = None,
         device: Union[str, torch.device, int] = "cpu",
-        deterministic_agent: bool = False,
+        deterministic_agents: bool = False,
         worker_id: int = 0,
         num_workers: int = 1,
         distributed_port: int = 0,
@@ -1327,7 +1421,7 @@ class OnPolicyInference(OnPolicyRLEngine):
             seed=seed,
             deterministic_cudnn=deterministic_cudnn,
             mp_ctx=mp_ctx,
-            deterministic_agent=deterministic_agent,
+            deterministic_agents=deterministic_agents,
             device=device,
             worker_id=worker_id,
             num_workers=num_workers,
@@ -1335,7 +1429,13 @@ class OnPolicyInference(OnPolicyRLEngine):
             **kwargs,
         )
 
+        # self.training_pipeline: TrainingPipeline = config.training_pipeline()  # Temporary change to log losses on val
+
         # get_logger().debug("{} worker {} using device {}".format(self.mode, self.worker_id, self.device))
+
+    # @property
+    # def step_count(self):
+    #     return self.training_pipeline.current_stage.steps_taken_in_stage
 
     def run_eval(
         self,
@@ -1408,6 +1508,105 @@ class OnPolicyInference(OnPolicyRLEngine):
                     )
                     last_time = new_time
                 frames += self.num_samplers - num_paused
+
+        # print("Checking Rollouts")
+        # print(rollouts.pick_observation_step(1)["rgb_resnet"].shape)
+
+        # # Recurrent Data Generator After Rollouts have been collected
+        # with torch.no_grad():
+        #     actor_critic_output, _ = self.actor_critic(
+        #         observations=rollouts.pick_observation_step(-1),
+        #         memory=rollouts.pick_memory_step(-1),
+        #         prev_actions=rollouts.prev_actions[-1:],
+        #         masks=rollouts.masks[-1:],
+        #     )
+
+        # rollouts.compute_returns(
+        #     next_value=actor_critic_output.values.detach(),
+        #     use_gae=self.training_pipeline.use_gae,
+        #     gamma=self.training_pipeline.gamma,
+        #     tau=self.training_pipeline.gae_lambda,
+        # )
+
+        # # print(rollouts.returns)
+
+        # advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
+        # data_generator = rollouts.recurrent_generator(
+        #     advantages, self.training_pipeline.num_mini_batch,
+        # )
+
+        # info = {}
+
+        # for bit, batch in enumerate(data_generator):
+        #     # masks is always [steps, samplers, agents, 1]:
+        #     num_rollout_steps, num_samplers = batch["masks"].shape[:2]
+        #     bsize = num_rollout_steps * num_samplers
+
+        #     print("Observations", batch["observations"].keys())
+
+        #     actor_critic_output, memory = self.actor_critic(
+        #         observations=batch["observations"],
+        #         memory=batch["memory"],
+        #         prev_actions=batch["prev_actions"],
+        #         masks=batch["masks"],
+        #     )
+
+        #     pred_action_logits = None
+        #     if self.inv_mode:
+        #         pred_action_logits = actor_critic_output.extras["pred_action_logits"]
+
+        #     next_state, next_state_pred = None, None
+        #     if self.fwd_mode:
+        #         next_state_pred = actor_critic_output.extras["next_state_pred"]
+        #         next_state = actor_critic_output.extras["next_state"]
+
+        #     pred_rotation_logits = None
+        #     if self.rot_mode:
+        #         pred_rotation_logits = actor_critic_output.extras[
+        #             "pred_rotation_logits"
+        #         ]
+
+        #     td_preds, td_pair_target = None, None
+        #     if self.td_mode:
+        #         td_preds = actor_critic_output.extras["td_preds"]
+        #         td_pair_target = actor_critic_output.extras["td_pair_target"]
+
+        #     rnn_hidden_states, fwd_rnn_hidden_states = None, None
+        #     if self.feat_random_mode:
+        #         rnn_hidden_states = actor_critic_output.extras["rnn_hidden_states"]
+        #         fwd_rnn_hidden_states = actor_critic_output.extras[
+        #             "fwd_rnn_hidden_states"
+        #         ]
+
+        #     for loss_name in self.training_pipeline.current_stage_losses:
+        #         loss, loss_weight = (
+        #             self.training_pipeline.current_stage_losses[loss_name],
+        #             self.training_pipeline.current_stage_loss_weights[loss_name],
+        #         )
+
+        #         current_loss, current_info = loss.loss(
+        #             step_count=self.step_count,
+        #             batch=batch,
+        #             actor_critic_output=actor_critic_output,
+        #             pred_action_logits=pred_action_logits,
+        #             pred_rotation_logits=pred_rotation_logits,
+        #             next_state=next_state,
+        #             next_state_pred=next_state_pred,
+        #             td_preds=td_preds,
+        #             td_pair_target=td_pair_target,
+        #             rnn_hidden_states=rnn_hidden_states,
+        #             fwd_rnn_hidden_states=fwd_rnn_hidden_states,
+        #         )
+
+        #         for key in current_info:
+        #             if loss_name + "/" + key not in info:
+        #                 info[loss_name + "/" + key] = []
+        #             info[loss_name + "/" + key].append(current_info[key])
+
+        # for k, v in info.items():
+        #     info[k] = np.mean(v)
+
+        # pprint(info)
 
         self.vector_tasks.resume_all()
         self.vector_tasks.set_seeds(self.worker_seeds(self.num_samplers, self.seed))

@@ -335,9 +335,7 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         if loop_dataset:
             self.max_tasks = None
         else:
-            self.max_tasks = sum(
-                len(scene_episodes) for scene_episodes in self.episodes
-            )
+            self.max_tasks = sum(len(self.episodes[scene]) for scene in self.episodes)
         self.reset_tasks = self.max_tasks
         self.scene_index = 0
         self.episode_index = 0
@@ -461,6 +459,8 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         task_info["path_to_target"] = episode["shortest_path"]
         task_info["object_type"] = episode["object_type"]
         task_info["id"] = episode["id"]
+        task_info["difficulty"] = episode["difficulty"]
+        task_info["object_id"] = episode["object_id"]
         if self.allow_flipping and random.random() > 0.5:
             task_info["mirrored"] = True
         else:

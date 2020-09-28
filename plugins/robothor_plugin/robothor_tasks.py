@@ -3,6 +3,7 @@ from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 import gym
 import numpy as np
 from ai2thor.util.metrics import compute_single_spl
+from ai2thor.util.metrics import path_distance
 
 from core.base_abstractions.misc import RLStepResult
 from core.base_abstractions.sensor import Sensor
@@ -18,6 +19,8 @@ from plugins.robothor_plugin.robothor_constants import (
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from utils.cache_utils import get_distance, get_distance_to_object
 from utils.system import get_logger
+
+EPS = 1e-7
 
 
 class PointNavTask(Task[RoboThorEnvironment]):
@@ -119,6 +122,20 @@ class PointNavTask(Task[RoboThorEnvironment]):
         )
         return step_result
 
+    def get_observations(
+        self, **kwargs
+    ) -> Any:  # Function required for rotation-prediction
+        obs = self.sensor_suite.get_observations(env=self.env, task=self, **kwargs)
+
+        rgb_uuid = [k for k, v in obs.items() if "rgb" in k][0]
+        if isinstance(obs[rgb_uuid], tuple):
+            rot_uuid = [k for k, v in obs.items() if "rot" in k][0]
+            rot_label = obs[rgb_uuid][1]
+            rgb_obs = obs[rgb_uuid][0]
+            obs[rgb_uuid] = rgb_obs
+            obs[rot_uuid] = rot_label
+        return obs
+
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
         if mode == "rgb":
@@ -204,6 +221,53 @@ class PointNavTask(Task[RoboThorEnvironment]):
         res = self.env.dist_to_point(self.task_info["target"])
         return res if res > -0.5 else None
 
+    def soft_progress(self):
+        """
+        Compute soft-progress made towards the goal
+        """
+        d_init = self.optimal_distance
+        if self.distance_cache:
+            d_T = get_distance(
+                self.distance_cache, self.env.agent_state(), self.task_info["target"]
+            )
+        else:
+            d_T = self.env.dist_to_point(self.task_info["target"])
+        if d_init >= 0.0 and d_T >= 0.0:
+            succ_fac = 1.0 - (d_T / (d_init + EPS))
+        else:
+            succ_fac = 0.0
+        succ_fac = max(succ_fac, 0)
+        return succ_fac
+
+    def soft_spl(self):
+        """
+        Computes SPL scaled by the soft-progress indicator
+        """
+        succ_fac = self.soft_progress()
+        if self.distance_cache:
+            li = self.optimal_distance
+            pi = self.num_moves_made * self.env.config["gridSize"]
+            res = succ_fac * (li / (max(pi, li)))
+        else:
+            res = compute_single_soft_spl(
+                self.path, self.episode_optimal_corners, succ_fac
+            )
+        return res
+
+    def compute_single_soft_spl(self, path, shortest_path, soft_progress):
+        """	
+        Computes Soft-SPL for a path dict(x=float, y=float, z=float)	
+        :param path: Sequence of dict(x=float, y=float, z=float) representing the path to evaluate	
+        :param shortest_path: Sequence of dict(x=float, y=float, z=float) representing the shortest oath	
+        :param soft_progress: float var indicating the amount of progress made by the agent towards the goal	
+        :return:	
+        """
+        Si = soft_progress
+        li = path_distance(shortest_path)
+        pi = path_distance(path)
+        soft_spl = Si * (li / (max(pi, li)))
+        return soft_spl
+
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():
             return {}
@@ -221,21 +285,30 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     self.task_info["target"],
                 )
                 spl = self.spl()
+                soft_spl = self.soft_spl()
+                soft_progress = self.soft_progress()
                 if spl is None:
                     return {}
             else:
                 # TODO
                 dist2tget = -1  # self._get_distance_to_target()
                 spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
+                soft_spl = (
+                    self.soft_spl() if len(self.episode_optimal_corners) > 1 else 0.0
+                )
+                soft_progress = self.soft_progress()
             if dist2tget is None:
                 return {}
 
             return {
                 "success": self._success,  # False also if no path to target
                 "ep_length": self.num_steps_taken(),
+                "ep_rewards": self._rewards,  # Also store per-timestep rewards for every episode
                 "total_reward": total_reward,
                 "dist_to_target": dist2tget,
                 "spl": spl,
+                "soft_spl": soft_spl,
+                "soft_progress": soft_progress,
                 "task_info": self.task_info,
             }
 
@@ -407,6 +480,55 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             )
         return res
 
+    def soft_progress(self):
+        """
+        Compute soft-progress made towards the goal
+        """
+        d_init = self.optimal_distance
+        if self.distance_cache:
+            d_T = get_distance_to_object(
+                self.distance_cache,
+                self.env.agent_state(),
+                self.task_info["object_type"],
+            )
+        else:
+            d_T = self.env.dist_to_object(self.task_info["object_type"])
+        if d_init >= 0.0 and d_T >= 0.0:
+            succ_fac = 1.0 - (d_T / (d_init + EPS))
+        else:
+            succ_fac = 0.0
+        succ_fac = max(succ_fac, 0)
+        return succ_fac
+
+    def soft_spl(self):
+        """
+        Computes SPL scaled by the soft-progress indicator
+        """
+        succ_fac = self.soft_progress()
+        if self.distance_cache:
+            li = self.optimal_distance
+            pi = self.num_moves_made * self.env.config["gridSize"]
+            res = succ_fac * (li / (max(pi, li)))
+        else:
+            res = compute_single_soft_spl(
+                self.path, self.episode_optimal_corners, succ_fac
+            )
+        return res
+
+    def compute_single_soft_spl(self, path, shortest_path, soft_progress):
+        """	
+        Computes Soft-SPL for a path dict(x=float, y=float, z=float)	
+        :param path: Sequence of dict(x=float, y=float, z=float) representing the path to evaluate	
+        :param shortest_path: Sequence of dict(x=float, y=float, z=float) representing the shortest oath	
+        :param soft_progress: float var indicating the amount of progress made by the agent towards the goal	
+        :return:	
+        """
+        Si = soft_progress
+        li = path_distance(shortest_path)
+        pi = path_distance(path)
+        soft_spl = Si * (li / (max(pi, li)))
+        return soft_spl
+
     def get_observations(self, **kwargs) -> Any:
         obs = self.sensor_suite.get_observations(env=self.env, task=self)
         if self.mirror:
@@ -428,19 +550,26 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 self.task_info["object_type"],
             )
             spl = self.spl()
+            soft_spl = self.soft_spl()
+            soft_progress = self.soft_progress()
         else:
             # TODO
             dist2tget = -1  # self._get_distance_to_target()
             spl = self.spl() if len(self.episode_optimal_corners) > 1 else 0.0
+            soft_spl = self.soft_spl() if len(self.episode_optimal_corners) > 1 else 0.0
+            soft_progress = self.soft_progress()
         if not self.is_done():
             return {}
         else:
             metrics = {
                 "success": self._success,
                 "ep_length": self.num_steps_taken(),
+                "ep_rewards": self._rewards,  # Also store per-timestep rewards for every episode
                 "total_reward": np.sum(self._rewards),
                 "dist_to_target": dist2tget,
                 "spl": spl,
+                "soft_spl": soft_spl,
+                "soft_progress": soft_progress,
                 "task_info": self.task_info,
             }
             self._rewards = []

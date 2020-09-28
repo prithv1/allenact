@@ -1,3 +1,7 @@
+"""
+[TODO] -- Add random-shift as implemented in https://arxiv.org/pdf/2004.13649.pdf
+"""
+
 # Original work Copyright (c) Facebook, Inc. and its affiliates.
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
@@ -20,6 +24,9 @@ from typing import (
 import gym
 import numpy as np
 import torch
+
+import core.base_abstractions.rgb_sensor_degradations as degradations
+
 from gym.spaces import Dict as SpaceDict
 from torch import nn
 from torchvision import transforms, models
@@ -223,6 +230,20 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         )
 
 
+class RotationSensor(Sensor[EnvType, SubTaskType]):
+    def __init__(self, uuid: str = "rot_label", **kwargs: Any):
+        observation_space = self._get_observation_space()
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self) -> gym.spaces.Discrete:
+        return gym.spaces.Discrete(4)
+
+    def get_observation(
+        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
+    ) -> Any:
+        return 0
+
+
 class VisionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
         self,
@@ -252,6 +273,35 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
+        # Support corruptions in the vision sensor
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        self._random_crop: Optional[bool] = f(kwargs, "random_crop", False)
+        self._crop_height: Optional[int] = f(kwargs, "crop_height", None)
+        self._crop_width: Optional[int] = f(kwargs, "crop_width", None)
+        self._jitter: Optional[bool] = f(kwargs, "color_jitter", False)
+
+        # Parse corruption details
+        # Additional inputs are
+        # - a list of corruptions
+        # - a list of severities
+        self._corruptions = f(kwargs, "corruptions", None)
+        self._severities = f(kwargs, "severities", None)
+
+        print("Applied corruptions are ")
+        print(self._corruptions)
+        print(self._severities)
+
+        # Whether to rotate the observation or not
+        self._rotate: bool = f(kwargs, "rotate", False)
+        self._rotate_prob: float = f(kwargs, "rotate_prob", None)
+        if self._rotate_prob is not None:
+            self._rotate_prob = [self._rotate_prob] + [(1 - self._rotate_prob) / 3] * 3
+            self._rotate_prob = [
+                float(x) / sum(self._rotate_prob) for x in self._rotate_prob
+            ]
+
         self._norm_means = mean
         self._norm_sds = stdev
         assert (self._norm_means is None) == (self._norm_sds is None), (
@@ -274,6 +324,17 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             self.scaler = ScaleBothSides(
                 width=cast(int, self._width), height=cast(int, self._height)
             )
+
+        # Data augmentation options
+        self._random_cropper = (
+            None
+            if not self._random_crop
+            else transforms.RandomCrop((self._crop_height, self._crop_width))
+        )
+
+        self._color_jitter = (
+            None if not self._jitter else transforms.ColorJitter(0.4, 0.4, 0.4, 0.4)
+        )
 
         self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
 
@@ -357,9 +418,42 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
     ) -> Any:
         im = self.frame_from_env(env)
 
+        # Apply sequence of corruptions to
+        # the RGB frames
+        if self._corruptions is not None:
+            im = degradations.apply_corruption_sequence(
+                np.array(im), self._corruptions, self._severities
+            )
+
+        # Random Crop Image
+        if self._random_crop:
+            if isinstance(im, np.ndarray):
+                im = self.to_pil(im)
+            im = self._random_cropper(im)
+
+        # Color Jitter
+        if self._jitter:
+            if isinstance(im, np.ndarray):
+                im = self.to_pil(im)
+            im = self._color_jitter(im)
+
+        if self._rotate:
+            if not isinstance(im, np.ndarray):
+                im = np.array(im)
+            im, rot_label = degradations.rotate_single(im, self._rotate_prob)
+
         if self._scale_first:
-            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
-                im = np.array(self.scaler(self.to_pil(im)), dtype=np.uint8)  # hwc
+            if not isinstance(im, np.ndarray):
+                shape_condition = im.size[:2] != (self._height, self._width)
+            else:
+                shape_condition = im.shape[:2] != (self._height, self._width)
+                im = self.to_pil(im)
+            if self.scaler is not None and shape_condition:
+                im = np.array(self.scaler(im), dtype=np.uint8)  # hwc
+
+        # if self._scale_first:
+        #     if self.scaler is not None and im.shape[:2] != (self._height, self._width):
+        #         im = np.array(self.scaler(self.to_pil(im)), dtype=np.uint8)  # hwc
 
         assert im.dtype in [np.uint8, np.float32]
 
@@ -374,7 +468,10 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             if self.scaler is not None and im.shape[:2] != (self._height, self._width):
                 im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
 
-        return im
+        if self._rotate:
+            return (im, rot_label)
+        else:
+            return im
 
 
 class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
