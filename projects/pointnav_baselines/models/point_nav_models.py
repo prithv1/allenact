@@ -279,7 +279,7 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
             )
             self.identity = nn.Sequential(nn.Identity())
             self.random_prob = (
-                0.7  # Feed clean observations with prob. 0.7; perturbed with prob 0.3
+                0.9  # Feed clean observations with prob. 0.7; perturbed with prob 0.3
             )
             for param in self.feat_randomizer.parameters():
                 param.requires_grad = False
