@@ -284,44 +284,44 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
             for param in self.feat_randomizer.parameters():
                 param.requires_grad = False
 
-        if self.atc_mode and self.aux_mode:
-            if (
-                rgb_resnet_preprocessor_uuid is None
-                or depth_resnet_preprocessor_uuid is None
-            ):
-                resnet_preprocessor_uuid = (
-                    rgb_resnet_preprocessor_uuid
-                    if rgb_resnet_preprocessor_uuid is not None
-                    else depth_resnet_preprocessor_uuid
-                )
-                self.momentum_goal_visual_encoder = ResnetTensorGoalEncoder(
-                    self.observation_space,
-                    goal_sensor_uuid,
-                    resnet_preprocessor_uuid,
-                    goal_dims,
-                    resnet_compressor_hidden_out_dims,
-                    combiner_hidden_out_dims,
-                )
-            else:
-                self.momentum_goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
-                    self.observation_space,
-                    goal_sensor_uuid,
-                    rgb_resnet_preprocessor_uuid,
-                    depth_resnet_preprocessor_uuid,
-                    goal_dims,
-                    resnet_compressor_hidden_out_dims,
-                    combiner_hidden_out_dims,
-                )
+        # if self.atc_mode and self.aux_mode:
+        #     if (
+        #         rgb_resnet_preprocessor_uuid is None
+        #         or depth_resnet_preprocessor_uuid is None
+        #     ):
+        #         resnet_preprocessor_uuid = (
+        #             rgb_resnet_preprocessor_uuid
+        #             if rgb_resnet_preprocessor_uuid is not None
+        #             else depth_resnet_preprocessor_uuid
+        #         )
+        #         self.momentum_goal_visual_encoder = ResnetTensorGoalEncoder(
+        #             self.observation_space,
+        #             goal_sensor_uuid,
+        #             resnet_preprocessor_uuid,
+        #             goal_dims,
+        #             resnet_compressor_hidden_out_dims,
+        #             combiner_hidden_out_dims,
+        #         )
+        #     else:
+        #         self.momentum_goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
+        #             self.observation_space,
+        #             goal_sensor_uuid,
+        #             rgb_resnet_preprocessor_uuid,
+        #             depth_resnet_preprocessor_uuid,
+        #             goal_dims,
+        #             resnet_compressor_hidden_out_dims,
+        #             combiner_hidden_out_dims,
+        #         )
 
-            self.code_size = 128
-            self.momentum = 0.01
-            self.ATCModel = AugmentedTemporalContrastModel(
-                self.goal_visual_encoder,
-                self.momentum_goal_visual_encoder,
-                self.goal_visual_encoder.output_dims,
-                self.code_size,
-                self.momentum,
-            )
+        #     self.code_size = 128
+        #     self.momentum = 0.01
+        #     self.ATCModel = AugmentedTemporalContrastModel(
+        #         self.goal_visual_encoder,
+        #         self.momentum_goal_visual_encoder,
+        #         self.goal_visual_encoder.output_dims,
+        #         self.code_size,
+        #         self.momentum,
+        #     )
 
         self.train()
         self.memory_key = "rnn"

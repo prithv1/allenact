@@ -62,8 +62,8 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
     NUM_PROCESSES = 15
     TRAINING_GPUS = [0, 1, 2]
-    VALIDATION_GPUS = [4]
-    TESTING_GPUS = [4]
+    VALIDATION_GPUS = [3]
+    TESTING_GPUS = [3]
     # NUM_PROCESSES = 1
     # TRAINING_GPUS = [0]
     # VALIDATION_GPUS = [1]
@@ -146,7 +146,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 PipelineStage(
                     loss_names=["ppo_loss", "td_pred_loss"],
                     max_stage_steps=ppo_steps,
-                    loss_weights=[1.0, 1.0],
+                    loss_weights=[0.0, 1.0],
                 )
             ],
             lr_scheduler_builder=Builder(

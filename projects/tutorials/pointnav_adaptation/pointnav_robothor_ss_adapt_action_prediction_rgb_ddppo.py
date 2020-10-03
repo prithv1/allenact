@@ -62,8 +62,8 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     ADVANCE_SCENE_ROLLOUT_PERIOD = 10 ** 13
     NUM_PROCESSES = 15
     TRAINING_GPUS = [0, 1, 2]
-    VALIDATION_GPUS = [4]
-    TESTING_GPUS = [4]
+    VALIDATION_GPUS = [3]
+    TESTING_GPUS = [3]
     # NUM_PROCESSES = 1
     # TRAINING_GPUS = [0]
     # VALIDATION_GPUS = [1]
@@ -118,9 +118,10 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 3
-        num_steps = 30
+        # num_steps = 30
+        num_steps = 500
         # save_interval = 5000000
-        save_interval = 1000
+        save_interval = 10000
         log_interval = 1000
         gamma = 0.99
         use_gae = True
@@ -147,6 +148,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                     loss_names=["ppo_loss", "act_pred_loss"],
                     max_stage_steps=ppo_steps,
                     loss_weights=[0.0, 0.001],
+                    # loss_weights=[0.0, 1.0],
                 )
             ],
             lr_scheduler_builder=Builder(
@@ -283,9 +285,8 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             goal_dims=32,
             aux_mode=True,
             inv_mode=True,
-            inv_visual_mode=False,
-            inv_belief_mode=True,
-            td_mode=False,
+            inv_visual_mode=True,
+            inv_belief_mode=False,
         )
 
     # Define Task Sampler

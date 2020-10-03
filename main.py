@@ -210,6 +210,15 @@ def get_args():
     )
 
     parser.add_argument(
+        "-rp",
+        "--rot_prob",
+        default=None,
+        type=float,
+        required=False,
+        help="Specify the rotation probability controlling stochas",
+    )
+
+    parser.add_argument(
         "-np",
         "--num_processes",
         default=None,
@@ -295,6 +304,10 @@ def main():
         TESTING_GPUS = [int(x) for x in args.test_gpus.split(",")]
         # TESTING_GPUS = [args.test_gpus]
 
+    ROTATION_PROB = None
+    if args.rot_prob is not None:
+        ROTATION_PROB = args.rot_prob
+
     get_logger().info("Running with args {}".format(args))
 
     ptitle("Master: {}".format("Training" if args.test_date is None else "Testing"))
@@ -307,9 +320,19 @@ def main():
     if NUM_PROCESSES is not None:
         cfg.NUM_PROCESSES = NUM_PROCESSES
 
-    cfg.monkey_patch_sensor(
-        VISUAL_CORRUPTION, VISUAL_SEVERITY, RANDOM_CROP, COLOR_JITTER
-    )
+    if ROTATION_PROB is not None:
+        cfg.monkey_patch_sensor(
+            VISUAL_CORRUPTION,
+            VISUAL_SEVERITY,
+            RANDOM_CROP,
+            COLOR_JITTER,
+            True,
+            ROTATION_PROB,
+        )
+    else:
+        cfg.monkey_patch_sensor(
+            VISUAL_CORRUPTION, VISUAL_SEVERITY, RANDOM_CROP, COLOR_JITTER
+        )
 
     cfg.monkey_patch_datasets(
         TRAINING_DATASET_DIR, VALIDATION_DATASET_DIR, TEST_DATASET_DIR

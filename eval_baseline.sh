@@ -428,6 +428,17 @@ sudo python main.py \
     -et v3_clean_mode \
     -tsg 3
 
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_rotation_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPORotationPrediction/v3_0.01/2020-09-26_06-48-06/exp_PointNavRobothorRGBPPORotationPrediction_v3_0.01__stage_00__steps_000020004041.pt \
+    -t 2020-09-26_06-48-06 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -rp 1.0 \
+    -et v4_clean_mode \
+    -tsg 0
+
 # Loss Logs=====================================
 sudo python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
@@ -454,6 +465,18 @@ sudo python main.py \
     -tsg 1 \
     -vc Gaussian_Noise \
     -vs 5
+
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_general_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v2_vanilla/2020-09-24_01-50-05/exp_PointNavRobothorRGBPPO_v2_vanilla__stage_00__steps_000015001569.pt \
+    -t 2020-09-24_01-50-05 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -et v2_gaussian_noise_s3_vanilla \
+    -tsg 1 \
+    -vc Gaussian_Noise \
+    -vs 3
 
 # Action Prediction (w/o bel)
 sudo python main.py \
@@ -506,6 +529,30 @@ sudo python main.py \
     -vs 5
 # Loss Logs=====================================
 
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_action_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPOActionPrediction/v2_bel_mode/2020-09-25_00-09-53/exp_PointNavRobothorRGBPPOActionPrediction_v2_bel_mode__stage_00__steps_000015002923.pt \
+    -t 2020-09-25_00-09-53 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -et v2_gaussian_noise_s3_bel_mode \
+    -tsg 5 \
+    -vc Gaussian_Noise \
+    -vs 3
+
+# Loss Logs=====================================
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_action_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPOActionPrediction/v2_bel_mode/2020-09-25_00-09-53/exp_PointNavRobothorRGBPPOActionPrediction_v2_bel_mode__stage_00__steps_000015002923.pt \
+    -r \
+    -trd datasets/robothor-pointnav/minival_60_per_sc \
+    -et v2_gaussian_noise_bel_mode_loss_logs \
+    -vc Gaussian_Noise \
+    -vs 3
+# Loss Logs=====================================
+
 # TD Prediction
 sudo python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
@@ -544,6 +591,19 @@ sudo python main.py \
     -vc Gaussian_Noise \
     -vs 5
 
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_rotation_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPORotationPrediction/v3_0.01/2020-09-26_06-48-06/exp_PointNavRobothorRGBPPORotationPrediction_v3_0.01__stage_00__steps_000020004041.pt \
+    -t 2020-09-26_06-48-06 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -et v4_gaussian_noise_mode \
+    -rp 1.0 \
+    -tsg 1 \
+    -vc Gaussian_Noise \
+    -vs 5
+
 # Loss Logs=====================================
 sudo python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
@@ -554,6 +614,30 @@ sudo python main.py \
     -et v2_gaussian_noise_mode_loss_logs \
     -vc Gaussian_Noise \
     -vs 5
+# Loss Logs=====================================
+
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_rotation_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPORotationPrediction/v3_0.01/2020-09-26_06-48-06/exp_PointNavRobothorRGBPPORotationPrediction_v3_0.01__stage_00__steps_000020004041.pt \
+    -t 2020-09-26_06-48-06 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -et v3_gaussian_noise_s3_mode \
+    -tsg 0 \
+    -vc Gaussian_Noise \
+    -vs 3
+
+# Loss Logs=====================================
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_rotation_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPORotationPrediction/v3_0.01/2020-09-26_06-48-06/exp_PointNavRobothorRGBPPORotationPrediction_v3_0.01__stage_00__steps_000020004041.pt \
+    -r \
+    -trd datasets/robothor-pointnav/minival_60_per_sc \
+    -et v2_gaussian_noise_s3_mode_loss_logs \
+    -vc Gaussian_Noise \
+    -vs 0
 # Loss Logs=====================================
 
 # *****************************
@@ -572,6 +656,18 @@ sudo python main.py \
     -tsg 2 \
     -vc Pixelate \
     -vs 5
+
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_general_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v2_vanilla/2020-09-24_01-50-05/exp_PointNavRobothorRGBPPO_v2_vanilla__stage_00__steps_000015001569.pt \
+    -t 2020-09-24_01-50-05 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -et v2_pixelate_s3_vanilla \
+    -tsg 0 \
+    -vc Pixelate \
+    -vs 3
 
 # Action Prediction (w/o bel)
 sudo python main.py \
@@ -623,6 +719,30 @@ sudo python main.py \
     -vs 5
 # Loss Logs=====================================
 
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_action_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPOActionPrediction/v2_bel_mode/2020-09-25_00-09-53/exp_PointNavRobothorRGBPPOActionPrediction_v2_bel_mode__stage_00__steps_000015002923.pt \
+    -t 2020-09-25_00-09-53 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -et v2_pixelate_s3_bel_mode \
+    -tsg 2 \
+    -vc Pixelate \
+    -vs 3
+
+# Loss Logs=====================================
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_action_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPOActionPrediction/v2_bel_mode/2020-09-25_00-09-53/exp_PointNavRobothorRGBPPOActionPrediction_v2_bel_mode__stage_00__steps_000015002923.pt \
+    -r \
+    -trd datasets/robothor-pointnav/minival_60_per_sc \
+    -et v2_pixelate_s3_bel_mode_loss_logs \
+    -vc Pixelate \
+    -vs 3
+# Loss Logs=====================================
+
 # TD Prediction
 sudo python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
@@ -661,6 +781,19 @@ sudo python main.py \
     -vc Pixelate \
     -vs 5
 
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_rotation_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPORotationPrediction/v3_0.01/2020-09-26_06-48-06/exp_PointNavRobothorRGBPPORotationPrediction_v3_0.01__stage_00__steps_000020004041.pt \
+    -t 2020-09-26_06-48-06 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -et v4_pixelate_mode \
+    -tsg 2 \
+    -rp 1.0 \
+    -vc Pixelate \
+    -vs 5
+
 # Loss Logs=====================================
 sudo python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
@@ -671,4 +804,28 @@ sudo python main.py \
     -et v2_pixelate_mode_loss_logs \
     -vc Pixelate \
     -vs 5
+# Loss Logs=====================================
+
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_rotation_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPORotationPrediction/v3_0.01/2020-09-26_06-48-06/exp_PointNavRobothorRGBPPORotationPrediction_v3_0.01__stage_00__steps_000020004041.pt \
+    -t 2020-09-26_06-48-06 \
+    -tsd datasets/robothor-pointnav/minival_60_per_sc \
+    -e \
+    -et v3_pixelate_s3_mode \
+    -tsg 1 \
+    -vc Pixelate \
+    -vs 3
+
+# Loss Logs=====================================
+sudo python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_evaluation pointnav_robothor_rotation_prediction_rgb_ddppo \
+    -c storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPORotationPrediction/v3_0.01/2020-09-26_06-48-06/exp_PointNavRobothorRGBPPORotationPrediction_v3_0.01__stage_00__steps_000020004041.pt \
+    -r \
+    -trd datasets/robothor-pointnav/minival_60_per_sc \
+    -et v2_pixelate_s3_mode_loss_logs \
+    -vc Pixelate \
+    -vs 3
 # Loss Logs=====================================
