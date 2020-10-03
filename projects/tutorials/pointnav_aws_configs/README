@@ -1,0 +1,2 @@
+This folder contains pointnav experiment configs for running jobs on AWS EC2 instances
+- Each config is appended by the EC2 instance name (useful for identifying the number of GPUs / memory, etc.)
