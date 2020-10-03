@@ -67,8 +67,8 @@ def subsample_episodes(EPISODES_PATH, SAVE_PATH, keep=100):
 if __name__ == "__main__":
     DIFF_LEVELS = 3
     NUM_VAL_SCENES = 15
-    # KEEP = 20
-    KEEP = 2
+    KEEP = 20
+    # KEEP = 2
     DATASPLIT_PATH = "datasets/robothor-pointnav/val/"
     EPISODES_PATH = DATASPLIT_PATH + "episodes/"
     SAVE_PATH = (
