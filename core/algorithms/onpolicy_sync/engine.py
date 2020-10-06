@@ -231,6 +231,12 @@ class OnPolicyRLEngine(object):
             print("Actor critic model has no attribute rotation mode")
 
         try:
+            self.sep_rot_mode = self.actor_critic.sep_rot_mode
+        except AttributeError:
+            self.sep_rot_mode = False
+            print("Actor critic model has no attribute separate rotation mode")
+
+        try:
             self.fwd_mode = self.actor_critic.fwd_mode
         except AttributeError:
             self.fwd_mode = False
@@ -347,7 +353,10 @@ class OnPolicyRLEngine(object):
             Dict[str, Union[Dict[str, Any], torch.Tensor, float, int, str, List]], ckpt,
         )
 
-        self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
+        # self.actor_critic.load_state_dict(ckpt["model_state_dict"])  # type:ignore
+        self.actor_critic.load_state_dict(
+            ckpt["model_state_dict"], strict=False
+        )  # temporary change to check if we can get away with loading a subset of weights from the model definition
 
         return ckpt
 
@@ -735,7 +744,13 @@ class OnPolicyTrainer(OnPolicyRLEngine):
             self.training_pipeline.restart_pipeline()
         else:
             self.seed = typing.cast(int, ckpt["trainer_seed"])
-            self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
+            # self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])  # type: ignore
+            # Try except statement here to load the optimizer
+            # state if possible given the checkpoints
+            try:
+                self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            except:
+                pass
             if self.lr_scheduler is not None:
                 self.lr_scheduler.load_state_dict(ckpt["scheduler_state"])  # type: ignore
 
@@ -918,7 +933,7 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     next_state = actor_critic_output.extras["next_state"]
 
                 pred_rotation_logits = None
-                if self.rot_mode:
+                if self.rot_mode or self.sep_rot_mode:
                     pred_rotation_logits = actor_critic_output.extras[
                         "pred_rotation_logits"
                     ]

@@ -3,7 +3,7 @@
 -- Add CPC|A as an auxiliary task
 """
 import typing
-from typing import Tuple, Dict, Optional, Union, List
+from typing import Tuple, Dict, Optional, Union, List, Callable
 
 import gym
 import torch
@@ -24,6 +24,8 @@ from core.base_abstractions.distributions import CategoricalDistr
 import math
 import copy
 from torch.distributions import Bernoulli
+
+from torchvision import models
 
 
 class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
@@ -137,6 +139,433 @@ class PointNavActorCriticSimpleConvRNN(ActorCriticModel[CategoricalDistr]):
         return ac_output, memory.set_tensor("rnn", rnn_hidden_states)
 
 
+class ResNetEmbedder(nn.Module):
+    def __init__(self, resnet, pool=True):
+        super().__init__()
+        self.model = resnet
+        self.pool = pool
+        # self.eval()
+
+    def forward(self, x):  # No use of torch.no_grad() during a forward pass
+        x = self.model.conv1(x)
+        x = self.model.bn1(x)
+        x = self.model.relu(x)
+        x = self.model.maxpool(x)
+
+        x = self.model.layer1(x)
+        x = self.model.layer2(x)
+        x = self.model.layer3(x)
+        x = self.model.layer4(x)
+
+        if not self.pool:
+            return x
+        else:
+            x = self.model.avgpool(x)
+            x = torch.flatten(x, 1)
+            return x
+
+
+class ResnetModelTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
+    def __init__(
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        goal_sensor_uuid: str,
+        rgb_resnet_preprocessor_uuid: Optional[str] = None,
+        rot_rgb_resnet_preprocessor_uuid: Optional[str] = None,
+        depth_resnet_preprocessor_uuid: Optional[str] = None,
+        hidden_size: int = 512,
+        goal_dims: int = 32,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        aux_mode: bool = False,
+        inv_mode: bool = False,
+        inv_visual_mode: bool = False,
+        inv_belief_mode: bool = False,
+        fwd_mode: bool = False,
+        fwd_visual_mode: bool = False,
+        fwd_belief_mode: bool = False,
+        rot_mode: bool = False,
+        sep_rot_mode: bool = False,
+        td_mode: bool = False,
+        feat_random_mode: bool = False,
+        pool: bool = False,
+        torchvision_resnet_model: Callable[..., models.ResNet] = models.resnet18,
+        resnet_embed_grad_mode: bool = True,
+        visual_encoder_grad_mode: bool = True,
+        recurrent_controller_grad_mode: bool = True,
+    ):
+        super().__init__(
+            action_space=action_space, observation_space=observation_space,
+        )
+
+        # Model settings
+        self.make_model = torchvision_resnet_model
+        self.pool = pool
+        self.resnet_embed_grad_mode = resnet_embed_grad_mode
+        self.resnet = ResNetEmbedder(self.make_model(pretrained=True), pool=self.pool,)
+        self.visual_encoder_grad_mode = visual_encoder_grad_mode
+        self.recurrent_controller_grad_mode = recurrent_controller_grad_mode
+
+        # Intrinsic Curiousity Module Arguments
+        self.aux_mode = aux_mode
+        self.inv_mode = inv_mode
+        self.inv_vis = inv_visual_mode
+        self.inv_bel = inv_belief_mode
+        self.fwd_mode = fwd_mode
+        self.fwd_vis = fwd_visual_mode
+        self.fwd_bel = fwd_belief_mode
+        self.rot_mode = rot_mode
+        self.sep_rot_mode = sep_rot_mode
+        self.td_mode = td_mode
+        self.feat_random_mode = feat_random_mode
+        self.rgb_resnet_preprocessor_uuid = rgb_resnet_preprocessor_uuid
+        self.rot_rgb_resnet_preprocessor_uuid = rot_rgb_resnet_preprocessor_uuid
+        self.observation_space = observation_space
+        self._hidden_size = hidden_size
+        if (
+            rgb_resnet_preprocessor_uuid is None
+            or depth_resnet_preprocessor_uuid is None
+        ):
+            resnet_preprocessor_uuid = (
+                rgb_resnet_preprocessor_uuid
+                if rgb_resnet_preprocessor_uuid is not None
+                else depth_resnet_preprocessor_uuid
+            )
+            self.goal_visual_encoder = ResnetTensorGoalEncoder(
+                self.observation_space,
+                goal_sensor_uuid,
+                resnet_preprocessor_uuid,
+                goal_dims,
+                resnet_compressor_hidden_out_dims,
+                combiner_hidden_out_dims,
+            )
+        else:
+            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
+                self.observation_space,
+                goal_sensor_uuid,
+                rgb_resnet_preprocessor_uuid,
+                depth_resnet_preprocessor_uuid,
+                goal_dims,
+                resnet_compressor_hidden_out_dims,
+                combiner_hidden_out_dims,
+            )
+        self.state_encoder = RNNStateEncoder(
+            self.goal_visual_encoder.output_dims, self._hidden_size,
+        )
+        self.actor = LinearActorHead(self._hidden_size, action_space.n)
+        self.critic = LinearCriticHead(self._hidden_size)
+
+        if self.inv_mode and self.aux_mode:
+            if self.inv_vis:
+                self.inverse_model = InverseModel(
+                    action_space,
+                    2 * self.goal_visual_encoder.output_dims,
+                    self.inv_vis,
+                    self.inv_bel,
+                )
+            elif self.inv_bel:
+                self.inverse_model = InverseModel(
+                    action_space,
+                    2 * self.goal_visual_encoder.output_dims + self._hidden_size,
+                    self.inv_vis,
+                    self.inv_bel,
+                )
+            self.inverse_model.train()
+
+        if self.fwd_mode and self.aux_mode:
+            if self.fwd_vis:
+                self.forward_model = ForwardModel(
+                    action_space,
+                    10,
+                    self.goal_visual_encoder.output_dims,
+                    self.goal_visual_encoder.output_dims,
+                    self.fwd_vis,
+                    self.fwd_bel,
+                )
+            elif self.fwd_bel:
+                self.forward_model = ForwardModel(
+                    action_space,
+                    10,
+                    self.goal_visual_encoder.output_dims + self._hidden_size,
+                    self.goal_visual_encoder.output_dims,
+                    self.fwd_vis,
+                    self.fwd_bel,
+                )
+            self.forward_model.train()
+
+        if (self.rot_mode or self.sep_rot_mode) and self.aux_mode:
+            self.rotation_model = RotationModel(self.goal_visual_encoder.output_dims)
+            self.rotation_model.train()
+
+        if self.td_mode and self.aux_mode:
+            self.temporal_model = TemporalDistancePredictor(
+                2 * self.goal_visual_encoder.output_dims + self._hidden_size,
+            )
+            self.temporal_model.train()
+
+        if self.feat_random_mode and self.aux_mode:
+            self.feat_randomizer = nn.Sequential(
+                nn.Conv2d(
+                    observation_space.spaces[rgb_resnet_preprocessor_uuid].shape[0],
+                    observation_space.spaces[rgb_resnet_preprocessor_uuid].shape[0],
+                    3,
+                    padding=1,
+                ),
+            )
+            self.identity = nn.Sequential(nn.Identity())
+            self.random_prob = (
+                0.9  # Feed clean observations with prob. 0.7; perturbed with prob 0.3
+            )
+            for param in self.feat_randomizer.parameters():
+                param.requires_grad = False
+            self.feat_randomizer.train()
+
+        # self.train()
+        self.memory_key = "rnn"
+
+    @property
+    def recurrent_hidden_state_size(self) -> int:
+        """The recurrent hidden state size of the model."""
+        return self._hidden_size
+
+    @property
+    def is_blind(self) -> bool:
+        """True if the model is blind (e.g. neither 'depth' or 'rgb' is an
+        input observation type)."""
+        return self.goal_visual_encoder.is_blind
+
+    @property
+    def num_recurrent_layers(self) -> int:
+        """Number of recurrent hidden layers."""
+        return self.state_encoder.num_recurrent_layers
+
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
+
+    def set_mode(self, train_mode=True):
+        """Custom method to turn training mode on only for instances of this class"""
+        if train_mode:
+            if not self.resnet_embed_grad_mode:
+                for param in self.resnet.parameters():
+                    param.requires_grad = False
+                self.resnet.eval()
+
+            if not self.visual_encoder_grad_mode:
+                for param in self.goal_visual_encoder.parameters():
+                    param.requires_grad = False
+                self.goal_visual_encoder.eval()
+
+            if not self.recurrent_controller_grad_mode:
+                for param in self.state_encoder.parameters():
+                    param.requires_grad = False
+                for param in self.actor.parameters():
+                    param.requires_grad = False
+                for param in self.critic.parameters():
+                    param.requires_grad = False
+                self.state_encoder.eval()
+                self.actor.eval()
+                self.critic.eval()
+
+    def resnet_embed(self, observations, uuid=None):
+        if uuid is None:
+            uuid = self.rgb_resnet_preprocessor_uuid
+        else:
+            observations[uuid] = observations[uuid].permute(
+                0, 1, 4, 3, 2
+            )  # To ensure tensors are shaped properly for the alternative rotated sensor
+        # ***********************************************************
+        # Feed raw un-processed observations through the ResNet embedder
+        # ***********************************************************
+        resnet_ip = observations[uuid]
+        nagent = 1
+        use_agent = False
+
+        # Adapt input before feeding in to the resnet embedder
+        if len(resnet_ip.shape) == 6:
+            use_agent = True
+            nstep, nsampler, nagent = resnet_ip.shape[:3]
+        else:
+            nstep, nsampler = resnet_ip.shape[:2]
+
+        observations[uuid] = resnet_ip.view(-1, *resnet_ip.shape[-3:])
+
+        # Feed to the resnet embedder
+        observations[uuid] = self.resnet(observations[uuid])
+
+        # Adapt output after feeding into the resnet embedder
+        if use_agent:
+            observations[uuid] = observations[uuid].view(
+                nstep, nsampler, nagent, *observations[uuid].shape[-3:],
+            )
+
+        observations[uuid] = observations[uuid].view(
+            nstep, nsampler * nagent, *observations[uuid].shape[-3:],
+        )
+        # ***********************************************************
+
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+        actions: torch.FloatTensor = None,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+
+        # ***********************************************************
+        # Set training mode properly
+        # ***********************************************************
+        self.set_mode(self.training)
+
+        # ***********************************************************
+        # Feed raw un-processed observations through the ResNet embedder
+        # ***********************************************************
+        self.resnet_embed(observations)
+        if self.aux_mode and self.sep_rot_mode:
+            self.resnet_embed(observations, self.rot_rgb_resnet_preprocessor_uuid)
+        # print(observations[self.rgb_resnet_preprocessor_uuid].shape)
+        # print(observations[self.rot_rgb_resnet_preprocessor_uuid].shape)
+        # ***********************************************************
+        # Feed raw un-processed observations through the ResNet embedder
+        # ***********************************************************
+
+        obs_encoding, orig_observations = self.goal_visual_encoder(
+            observations
+        )  # Changed goal_visual_encoder forward return to avoid deepcopy over non-leaf tensor
+        obs_encoding, rnn_hidden_states = self.state_encoder(
+            obs_encoding, memory.tensor(self.memory_key), masks
+        )
+
+        # Action-Prediction
+        action_logits = None
+        rotation_logits = None
+        next_state = None
+        next_state_pred = None
+        td_preds = None
+        td_pair_target = None
+        curr_obs_encoding = obs_encoding
+        if self.inv_vis:
+            obs_input = self.goal_visual_encoder.visual_compressor(orig_observations)
+            action_logits = self.inverse_model(obs_input)
+
+        if self.fwd_vis:
+            obs_input = self.goal_visual_encoder.visual_compressor(orig_observations)
+            if actions is not None:
+                next_state_pred, next_state = self.forward_model(
+                    curr_obs_encoding, actions
+                )
+
+        if self.rot_mode:
+            obs_input = self.goal_visual_encoder.visual_compressor(orig_observations)
+            rotation_logits = self.rotation_model(obs_input)
+
+        if self.sep_rot_mode:
+            obs_input = self.goal_visual_encoder.visual_compressor(
+                orig_observations, self.rot_rgb_resnet_preprocessor_uuid
+            )
+            rotation_logits = self.rotation_model(obs_input)
+
+        # fwd_rnn_hidden_states = None
+        if self.feat_random_mode:
+            # Bug here
+            # Use the randomized observations to collect rollout and update
+            # based on advantage estimates
+            # Add the feature matching loss to match things to the clean
+            # observation
+
+            probs = torch.tensor([self.random_prob]).repeat(curr_obs_encoding.shape[1])
+            randomizer_dist = Bernoulli(probs)
+            mask = randomizer_dist.sample()
+            mask = mask.unsqueeze(0).unsqueeze(2).unsqueeze(3).unsqueeze(4)
+            mask = mask.repeat(
+                orig_observations[self.rgb_resnet_preprocessor_uuid].shape[0],
+                1,
+                orig_observations[self.rgb_resnet_preprocessor_uuid].shape[2],
+                orig_observations[self.rgb_resnet_preprocessor_uuid].shape[3],
+                orig_observations[self.rgb_resnet_preprocessor_uuid].shape[4],
+            )
+            mask = mask.to(curr_obs_encoding.device)
+            std = math.sqrt(
+                1
+                / (
+                    self.observation_space.spaces[
+                        self.rgb_resnet_preprocessor_uuid
+                    ].shape[0]
+                )
+            )
+            for m in self.feat_randomizer.modules():
+                if isinstance(m, nn.Conv2d):
+                    nn.init.normal(m.weight, mean=0, std=std)
+                    nn.init.constant(m.bias, 0)
+
+            rgb_observations = orig_observations[self.rgb_resnet_preprocessor_uuid]
+            nstep, nsampler = rgb_observations.shape[:2]
+            feat_dims = rgb_observations.shape[-3:]
+
+            rgb_observations = mask * rgb_observations + (
+                1 - mask
+            ) * self.feat_randomizer(rgb_observations.view(-1, *feat_dims)).view(
+                nstep, nsampler, *feat_dims
+            )
+
+            orig_observations[self.rgb_resnet_preprocessor_uuid] = rgb_observations
+
+            fwd_obs_encoding = self.goal_visual_encoder(orig_observations)
+            fwd_obs_encoding, fwd_rnn_hidden_states = self.state_encoder(
+                fwd_obs_encoding, memory.tensor(self.memory_key), masks
+            )
+        else:
+            fwd_obs_encoding = obs_encoding
+            fwd_rnn_hidden_states = rnn_hidden_states
+
+        if self.inv_bel:
+            obs_input = self.goal_visual_encoder.visual_compressor(orig_observations)
+            action_logits = self.inverse_model(obs_input, rnn_hidden_states)
+
+        if self.fwd_bel:
+            if actions is not None:
+                obs_input = self.goal_visual_encoder.visual_compressor(
+                    orig_observations
+                )
+                next_state_pred, next_state = self.forward_model(
+                    obs_input, actions, rnn_hidden_states
+                )
+
+        if self.td_mode:
+            obs_input = self.goal_visual_encoder.visual_compressor(orig_observations)
+            td_preds, td_pair_target = self.temporal_model(
+                obs_input, rnn_hidden_states,
+            )
+
+        return (
+            ActorCriticOutput(
+                distributions=self.actor(fwd_obs_encoding),
+                values=self.critic(fwd_obs_encoding),
+                extras={
+                    "pred_action_logits": action_logits,
+                    "pred_rotation_logits": rotation_logits,
+                    "next_state": next_state,
+                    "next_state_pred": next_state_pred,
+                    "td_preds": td_preds,
+                    "td_pair_target": td_pair_target,
+                    "fwd_rnn_hidden_states": rnn_hidden_states,
+                    "rnn_hidden_states": fwd_rnn_hidden_states,
+                },
+            ),
+            memory.set_tensor(self.memory_key, fwd_rnn_hidden_states),
+        )
+
+
 class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
@@ -159,7 +588,6 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         rot_mode: bool = False,
         td_mode: bool = False,
         feat_random_mode: bool = False,
-        atc_mode: bool = False,
     ):
         super().__init__(
             action_space=action_space, observation_space=observation_space,
@@ -176,7 +604,6 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         self.rot_mode = rot_mode
         self.td_mode = td_mode
         self.feat_random_mode = feat_random_mode
-        self.atc_mode = atc_mode
         self.rgb_resnet_preprocessor_uuid = rgb_resnet_preprocessor_uuid
         self.observation_space = observation_space
         self._hidden_size = hidden_size
@@ -284,45 +711,6 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
             for param in self.feat_randomizer.parameters():
                 param.requires_grad = False
 
-        # if self.atc_mode and self.aux_mode:
-        #     if (
-        #         rgb_resnet_preprocessor_uuid is None
-        #         or depth_resnet_preprocessor_uuid is None
-        #     ):
-        #         resnet_preprocessor_uuid = (
-        #             rgb_resnet_preprocessor_uuid
-        #             if rgb_resnet_preprocessor_uuid is not None
-        #             else depth_resnet_preprocessor_uuid
-        #         )
-        #         self.momentum_goal_visual_encoder = ResnetTensorGoalEncoder(
-        #             self.observation_space,
-        #             goal_sensor_uuid,
-        #             resnet_preprocessor_uuid,
-        #             goal_dims,
-        #             resnet_compressor_hidden_out_dims,
-        #             combiner_hidden_out_dims,
-        #         )
-        #     else:
-        #         self.momentum_goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
-        #             self.observation_space,
-        #             goal_sensor_uuid,
-        #             rgb_resnet_preprocessor_uuid,
-        #             depth_resnet_preprocessor_uuid,
-        #             goal_dims,
-        #             resnet_compressor_hidden_out_dims,
-        #             combiner_hidden_out_dims,
-        #         )
-
-        #     self.code_size = 128
-        #     self.momentum = 0.01
-        #     self.ATCModel = AugmentedTemporalContrastModel(
-        #         self.goal_visual_encoder,
-        #         self.momentum_goal_visual_encoder,
-        #         self.goal_visual_encoder.output_dims,
-        #         self.code_size,
-        #         self.momentum,
-        #     )
-
         self.train()
         self.memory_key = "rnn"
 
@@ -382,10 +770,12 @@ class ResnetTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         actions: torch.FloatTensor = None,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
 
-        if self.aux_mode:
-            orig_observations = copy.deepcopy(observations)
+        # if self.aux_mode:
+        #     orig_observations = copy.deepcopy(observations)
 
-        obs_encoding = self.goal_visual_encoder(observations)
+        obs_encoding, orig_observations = self.goal_visual_encoder(
+            observations
+        )  # Changed goal visual encoder to return unshaped observations
         obs_encoding, rnn_hidden_states = self.state_encoder(
             obs_encoding, memory.tensor(self.memory_key), masks
         )
@@ -948,14 +1338,28 @@ class ResnetTensorGoalEncoder(nn.Module):
         x = self.target_obs_combiner(torch.cat(embs, dim=1,))
         x = x.view(x.size(0), -1)  # flatten
 
-        return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
+        if use_agent:
+            observations[self.resnet_uuid] = observations[self.resnet_uuid].view(
+                nstep, nsampler, nagent, *observations[self.resnet_uuid].shape[-3:]
+            )
+        observations[self.resnet_uuid] = observations[self.resnet_uuid].view(
+            nstep, nsampler * nagent, *observations[self.resnet_uuid].shape[-3:]
+        )
+        return self.adapt_output(x, use_agent, nstep, nsampler, nagent), observations
 
-    def visual_compressor(self, observations):
+    def visual_compressor(self, observations, rot_resnet_uuid=None):
+        if rot_resnet_uuid is not None:
+            rgb_uuid = self.resnet_uuid
+            self.resnet_uuid = rot_resnet_uuid
         observations, use_agent, nstep, nsampler, nagent = self.adapt_input(
             observations
         )
         x = self.compress_resnet(observations)
         x = x.view(x.size(0), -1)  # flatten
+
+        if rot_resnet_uuid is not None:
+            self.resnet_uuid = rgb_uuid
+
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
 

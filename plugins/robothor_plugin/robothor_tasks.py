@@ -129,11 +129,22 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
         rgb_uuid = [k for k, v in obs.items() if "rgb" in k][0]
         if isinstance(obs[rgb_uuid], tuple):
-            rot_uuid = [k for k, v in obs.items() if "rot" in k][0]
-            rot_label = obs[rgb_uuid][1]
-            rgb_obs = obs[rgb_uuid][0]
-            obs[rgb_uuid] = rgb_obs
-            obs[rot_uuid] = rot_label
+            if len(obs[rgb_uuid]) == 2:  # Regular rotate mode
+                rot_uuid = [k for k, v in obs.items() if "rot" in k][0]
+                rot_label = obs[rgb_uuid][1]
+                rgb_obs = obs[rgb_uuid][0]
+                obs[rgb_uuid] = rgb_obs
+                obs[rot_uuid] = rot_label
+            elif len(obs[rgb_uuid]) == 3:  # Separate rotate mode
+                rot_label_uuid = [k for k, v in obs.items() if "rot_label" in k][0]
+                rot_rgb_uuid = [k for k, v in obs.items() if "rot_rgb" in k][0]
+                rgb_uuid = [k for k, v in obs.items() if "rot" not in k][0]
+                rot_label = obs[rgb_uuid][2]
+                rot_rgb_obs = obs[rgb_uuid][1]
+                rgb_obs = obs[rgb_uuid][0]
+                obs[rgb_uuid] = rgb_obs
+                obs[rot_rgb_uuid] = rot_rgb_obs
+                obs[rot_label_uuid] = rot_label
         return obs
 
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:

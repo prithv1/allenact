@@ -128,3 +128,84 @@ class ResnetPreProcessorHabitat(Preprocessor):
         if x.shape[1] == 1:
             x = x.repeat(1, 3, 1, 1)
         return self.resnet(x.to(self.device))
+
+
+class IdentityPreProcessorHabitat(Preprocessor):
+    """Preprocess RGB or depth images in absence of any model via an Identity() layer."""
+
+    def __init__(
+        self,
+        input_uuids: List[str],
+        output_uuid: str,
+        input_height: int,
+        input_width: int,
+        output_height: int,
+        output_width: int,
+        output_dims: int,
+        parallel: bool = True,
+        device: Optional[torch.device] = None,
+        device_ids: Optional[List[torch.device]] = None,
+        **kwargs: Any
+    ):
+        def f(x, k):
+            assert k in x, "{} must be set in IdentityPreProcessorHabitat".format(k)
+            return x[k]
+
+        def optf(x, k, default):
+            return x[k] if k in x else default
+
+        self.input_height = input_height
+        self.input_width = input_width
+        self.output_height = output_height
+        self.output_width = output_width
+        self.output_dims = output_dims
+        self.parallel = parallel
+        self.device = (
+            device
+            if device is not None
+            else ("cuda" if self.parallel and torch.cuda.is_available() else "cpu")
+        )
+        self.device_ids = device_ids or cast(
+            List[torch.device], list(range(torch.cuda.device_count()))
+        )
+
+        self.identity_model = nn.Sequential(nn.Identity())
+
+        self.model = self.identity_model.to(self.device)
+
+        if self.parallel:
+            assert (
+                torch.cuda.is_available()
+            ), "attempt to parallelize identity without cuda"
+            get_logger().info("Distributing identity")
+            self.model = self.model.to(torch.device("cuda"))
+
+            self.model = torch.nn.DataParallel(
+                self.model, device_ids=self.device_ids
+            )  # , output_device=torch.cuda.device_count() - 1)
+            get_logger().info("Detected {} devices".format(torch.cuda.device_count()))
+
+        low = -np.inf
+        high = np.inf
+        shape = (self.output_dims, self.output_height, self.output_width)
+
+        assert (
+            len(input_uuids) == 1
+        ), "identity preprocessor can only consume one observation type"
+
+        observation_space = gym.spaces.Box(low=low, high=high, shape=shape)
+
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    def to(self, device: torch.device) -> "IdentityPreProcessorHabitat":
+        if not self.parallel:
+            self.model = self.model.to(device)
+            self.device = device
+        return self
+
+    def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
+        x = obs[self.input_uuids[0]].to(self.device).permute(0, 3, 1, 2)  # bhwc -> bchw
+        # If the input is depth, repeat it across all 3 channels
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)
+        return self.model(x.to(self.device))
