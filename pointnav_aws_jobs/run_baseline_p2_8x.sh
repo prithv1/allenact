@@ -12,3 +12,9 @@ python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
     -b projects/tutorials/pointnav_aws_configs pointnav_robothor_rotation_prediction_resnet_rgb_ddppo_p2_8x_large \
     -et v1_rot_pred_rnet1_ve1_rc1_rp0.7_coeff0.01_ec2_p2_8x_large
+
+# Separate Rotation Prediction (updating ResNet)
+python main.py \
+    -o storage/robothor-pointnav-rgb-resnet \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_sep_rotation_prediction_resnet_rgb_ddppo_p2_8x_large \
+    -et v1_sep_rot_pred_rnet1_ve1_rc1_coeff0.01_ec2_p2_8x_large
