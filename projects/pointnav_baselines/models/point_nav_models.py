@@ -165,6 +165,356 @@ class ResNetEmbedder(nn.Module):
             return x
 
 
+class ResnetAdaBnormTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
+    def __init__(
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        goal_sensor_uuid: str,
+        rgb_resnet_preprocessor_uuid: Optional[str] = None,
+        depth_resnet_preprocessor_uuid: Optional[str] = None,
+        hidden_size: int = 512,
+        goal_dims: int = 32,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        bnorm_mode: bool = False,
+        only_bnorm_mode: bool = False,
+    ):
+        super().__init__(
+            action_space=action_space, observation_space=observation_space,
+        )
+
+        # Intrinsic Curiousity Module Arguments
+        self.bnorm_mode = bnorm_mode
+        self.only_bnorm_mode = only_bnorm_mode
+        self.rgb_resnet_preprocessor_uuid = rgb_resnet_preprocessor_uuid
+        self.depth_resnet_preprocessor_uuid = depth_resnet_preprocessor_uuid
+        self.observation_space = observation_space
+        self._hidden_size = hidden_size
+        if (
+            rgb_resnet_preprocessor_uuid is None
+            or depth_resnet_preprocessor_uuid is None
+        ):
+            resnet_preprocessor_uuid = (
+                rgb_resnet_preprocessor_uuid
+                if rgb_resnet_preprocessor_uuid is not None
+                else depth_resnet_preprocessor_uuid
+            )
+            self.goal_visual_encoder = ResnetTensorGoalEncoder(
+                self.observation_space,
+                goal_sensor_uuid,
+                resnet_preprocessor_uuid,
+                goal_dims,
+                resnet_compressor_hidden_out_dims,
+                combiner_hidden_out_dims,
+                batchnorm_mode=self.bnorm_mode,
+            )
+        else:
+            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
+                self.observation_space,
+                goal_sensor_uuid,
+                rgb_resnet_preprocessor_uuid,
+                depth_resnet_preprocessor_uuid,
+                goal_dims,
+                resnet_compressor_hidden_out_dims,
+                combiner_hidden_out_dims,
+            )
+        self.state_encoder = RNNStateEncoder(
+            self.goal_visual_encoder.output_dims, self._hidden_size,
+        )
+        self.actor = LinearActorHead(self._hidden_size, action_space.n)
+        self.critic = LinearCriticHead(self._hidden_size)
+
+        if not self.only_bnorm_mode:
+            self.train()
+        self.memory_key = "rnn"
+
+    @property
+    def recurrent_hidden_state_size(self) -> int:
+        """The recurrent hidden state size of the model."""
+        return self._hidden_size
+
+    @property
+    def is_blind(self) -> bool:
+        """True if the model is blind (e.g. neither 'depth' or 'rgb' is an
+        input observation type)."""
+        return self.goal_visual_encoder.is_blind
+
+    @property
+    def num_recurrent_layers(self) -> int:
+        """Number of recurrent hidden layers."""
+        return self.state_encoder.num_recurrent_layers
+
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
+
+    def set_mode(self, only_bnorm_mode=False):
+        """
+        Custom method to decide which portions of the model to set to training mode
+        """
+        if self.only_bnorm_mode:
+            for param in self.state_encoder.parameters():
+                param.requires_grad = False
+            for param in self.actor.parameters():
+                param.requires_grad = False
+            for param in self.critic.parameters():
+                param.requires_grad = False
+            self.actor.eval()
+            self.critic.eval()
+
+            # Handle visual encoder
+            for param in self.goal_visual_encoder.embed_goal.parameters():
+                param.requires_grad = False
+            self.goal_visual_encoder.embed_goal.eval()
+
+            for param in self.goal_visual_encoder.target_obs_combiner.parameters():
+                param.requires_grad = False
+            self.goal_visual_encoder.target_obs_combiner.eval()
+
+            # Handle resnet compressor modules
+            for m in self.goal_visual_encoder.resnet_compressor.modules():
+                if isinstance(m, nn.BatchNorm2d):
+                    m.train()
+                    m.weight.requires_grad = True
+                    m.bias.requires_grad = True
+                elif isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear()):
+                    m.eval()
+                    m.weight.requires_grad = False
+                    m.bias.requires_grad = False
+
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+        actions: torch.FloatTensor = None,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+
+        # ***********************************************************
+        # Set training mode properly
+        # ***********************************************************
+        if self.training:
+            if self.only_bnorm_mode:
+                self.set_mode(self.only_bnorm_mode)
+        # ***********************************************************
+
+        obs_encoding, orig_observations = self.goal_visual_encoder(
+            observations
+        )  # Changed goal visual encoder to return unshaped observations
+
+        obs_encoding, rnn_hidden_states = self.state_encoder(
+            obs_encoding, memory.tensor(self.memory_key), masks
+        )
+
+        return (
+            ActorCriticOutput(
+                distributions=self.actor(obs_encoding),
+                values=self.critic(obs_encoding),
+                extras={
+                    "obs_encoding": obs_encoding,
+                    "rnn_hidden_states": rnn_hidden_states,
+                },
+            ),
+            memory.set_tensor(self.memory_key, rnn_hidden_states),
+        )
+
+
+# Add feature-level consistency objective
+class ResnetAugmentorTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
+    def __init__(
+        self,
+        action_space: gym.spaces.Discrete,
+        observation_space: SpaceDict,
+        goal_sensor_uuid: str,
+        rgb_resnet_preprocessor_uuid: Optional[str] = None,
+        depth_resnet_preprocessor_uuid: Optional[str] = None,
+        hidden_size: int = 512,
+        goal_dims: int = 32,
+        resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
+        combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        aux_mode: bool = False,
+        aug_mode: bool = False,
+    ):
+        super().__init__(
+            action_space=action_space, observation_space=observation_space,
+        )
+
+        # Intrinsic Curiousity Module Arguments
+        self.aux_mode = aux_mode
+        self.aug_mode = aug_mode
+        self.rgb_resnet_preprocessor_uuid = rgb_resnet_preprocessor_uuid
+        self.depth_resnet_preprocessor_uuid = depth_resnet_preprocessor_uuid
+        self.observation_space = observation_space
+        self._hidden_size = hidden_size
+        if (
+            rgb_resnet_preprocessor_uuid is None
+            or depth_resnet_preprocessor_uuid is None
+        ):
+            resnet_preprocessor_uuid = (
+                rgb_resnet_preprocessor_uuid
+                if rgb_resnet_preprocessor_uuid is not None
+                else depth_resnet_preprocessor_uuid
+            )
+            self.goal_visual_encoder = ResnetTensorGoalEncoder(
+                self.observation_space,
+                goal_sensor_uuid,
+                resnet_preprocessor_uuid,
+                goal_dims,
+                resnet_compressor_hidden_out_dims,
+                combiner_hidden_out_dims,
+            )
+        else:
+            self.goal_visual_encoder = ResnetDualTensorGoalEncoder(  # type:ignore
+                self.observation_space,
+                goal_sensor_uuid,
+                rgb_resnet_preprocessor_uuid,
+                depth_resnet_preprocessor_uuid,
+                goal_dims,
+                resnet_compressor_hidden_out_dims,
+                combiner_hidden_out_dims,
+            )
+        self.state_encoder = RNNStateEncoder(
+            self.goal_visual_encoder.output_dims, self._hidden_size,
+        )
+        self.actor = LinearActorHead(self._hidden_size, action_space.n)
+        self.critic = LinearCriticHead(self._hidden_size)
+
+        if self.aug_mode and self.aux_mode:
+            self.augmentor = nn.Sequential(
+                nn.Conv2d(
+                    observation_space.spaces[rgb_resnet_preprocessor_uuid].shape[0],
+                    observation_space.spaces[rgb_resnet_preprocessor_uuid].shape[0],
+                    1,
+                ),
+                # nn.Dropout2d(0.2),
+                # nn.Conv2d(
+                #     observation_space.spaces[rgb_resnet_preprocessor_uuid].shape[0],
+                #     observation_space.spaces[rgb_resnet_preprocessor_uuid].shape[0],
+                #     1,
+                # ),
+            )
+
+        self.train()
+        self.memory_key = "rnn"
+
+    @property
+    def recurrent_hidden_state_size(self) -> int:
+        """The recurrent hidden state size of the model."""
+        return self._hidden_size
+
+    @property
+    def is_blind(self) -> bool:
+        """True if the model is blind (e.g. neither 'depth' or 'rgb' is an
+        input observation type)."""
+        return self.goal_visual_encoder.is_blind
+
+    @property
+    def num_recurrent_layers(self) -> int:
+        """Number of recurrent hidden layers."""
+        return self.state_encoder.num_recurrent_layers
+
+    def _recurrent_memory_specification(self):
+        return {
+            self.memory_key: (
+                (
+                    ("layer", self.num_recurrent_layers),
+                    ("sampler", None),
+                    ("hidden", self.recurrent_hidden_state_size),
+                ),
+                torch.float32,
+            )
+        }
+
+    def get_parameter_subset(self, augmentor_mode=False):
+        # Get subset of parameters based on augmentor_mode
+        if augmentor_mode:
+            params = self.augmentor.parameters()
+        else:
+            params = (
+                list(self.goal_visual_encoder.parameters())
+                + list(self.state_encoder.parameters())
+                + list(self.actor.parameters())
+                + list(self.critic.parameters())
+                + list(
+                    self.augmentor.parameters()
+                )  # Conditionally take augmentor parameters into consideration as well
+            )
+        return params
+
+    def get_grad_subset(self, loss):
+        grads = torch.autograd.grad(
+            loss, self.goal_visual_encoder.parameters(), create_graph=True,
+        )
+        return grads
+
+    def forward(  # type:ignore
+        self,
+        observations: ObservationType,
+        memory: Memory,
+        prev_actions: torch.Tensor,
+        masks: torch.FloatTensor,
+        actions: torch.FloatTensor = None,
+    ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
+
+        obs_encoding, orig_observations = self.goal_visual_encoder(
+            observations
+        )  # Changed goal visual encoder to return unshaped observations
+
+        obs_encoding, rnn_hidden_states = self.state_encoder(
+            obs_encoding, memory.tensor(self.memory_key), masks
+        )
+
+        # For the auxiliary task, which is learning an augmentor network
+        # Let's define the consistency term as KL b/w
+        # - Augmented Policy Distribution
+        # - Unaugmented Policy Distribution
+
+        aug_obs_encoding = None
+        aug_rnn_hidden_states = None
+        if self.aux_mode and self.aug_mode:
+            rgb_observations = orig_observations[self.rgb_resnet_preprocessor_uuid]
+            nstep, nsampler = rgb_observations.shape[:2]
+            feat_dims = rgb_observations.shape[-3:]
+
+            # Forward Pass through augmentor
+            rgb_observations = self.augmentor(
+                rgb_observations.view(-1, *feat_dims)
+            ).view(nstep, nsampler, *feat_dims)
+
+            orig_observations[self.rgb_resnet_preprocessor_uuid] = rgb_observations
+
+            aug_obs_encoding, _ = self.goal_visual_encoder(orig_observations)
+            aug_obs_encoding, aug_rnn_hidden_states = self.state_encoder(
+                aug_obs_encoding, memory.tensor(self.memory_key), masks
+            )
+
+        return (
+            ActorCriticOutput(
+                distributions=self.actor(obs_encoding),
+                values=self.critic(obs_encoding),
+                extras={
+                    "aug_obs_encoding": aug_obs_encoding,
+                    "aug_rnn_hidden_states": aug_rnn_hidden_states,
+                    "obs_encoding": obs_encoding,
+                    "rnn_hidden_states": rnn_hidden_states,
+                    "aug_distributions": self.actor(aug_obs_encoding),
+                    "aug_values": self.critic(aug_obs_encoding),
+                },
+            ),
+            memory.set_tensor(self.memory_key, rnn_hidden_states),
+        )
+
+
 class ResnetModelTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
     def __init__(
         self,
@@ -187,6 +537,7 @@ class ResnetModelTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         fwd_belief_mode: bool = False,
         rot_mode: bool = False,
         sep_rot_mode: bool = False,
+        rot_train_mode: bool = True,
         td_mode: bool = False,
         feat_random_mode: bool = False,
         pool: bool = False,
@@ -217,9 +568,11 @@ class ResnetModelTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         self.fwd_bel = fwd_belief_mode
         self.rot_mode = rot_mode
         self.sep_rot_mode = sep_rot_mode
+        self.rot_train_mode = rot_train_mode
         self.td_mode = td_mode
         self.feat_random_mode = feat_random_mode
         self.rgb_resnet_preprocessor_uuid = rgb_resnet_preprocessor_uuid
+        self.depth_resnet_preprocessor_uuid = depth_resnet_preprocessor_uuid
         self.rot_rgb_resnet_preprocessor_uuid = rot_rgb_resnet_preprocessor_uuid
         self.observation_space = observation_space
         self._hidden_size = hidden_size
@@ -296,7 +649,10 @@ class ResnetModelTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
         if (self.rot_mode or self.sep_rot_mode) and self.aux_mode:
             self.rotation_model = RotationModel(self.goal_visual_encoder.output_dims)
-            self.rotation_model.train()
+            if self.rot_train_mode:
+                self.rotation_model.train()
+            else:
+                self.rotation_model.eval()
 
         if self.td_mode and self.aux_mode:
             self.temporal_model = TemporalDistancePredictor(
@@ -372,7 +728,7 @@ class ResnetModelTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
                     param.requires_grad = False
                 for param in self.critic.parameters():
                     param.requires_grad = False
-                self.state_encoder.eval()
+                # self.state_encoder.eval()
                 self.actor.eval()
                 self.critic.eval()
 
@@ -433,8 +789,7 @@ class ResnetModelTensorPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         self.resnet_embed(observations)
         if self.aux_mode and self.sep_rot_mode:
             self.resnet_embed(observations, self.rot_rgb_resnet_preprocessor_uuid)
-        # print(observations[self.rgb_resnet_preprocessor_uuid].shape)
-        # print(observations[self.rot_rgb_resnet_preprocessor_uuid].shape)
+
         # ***********************************************************
         # Feed raw un-processed observations through the ResNet embedder
         # ***********************************************************
@@ -1242,6 +1597,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         goal_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
+        batchnorm_mode: bool = False,
     ) -> None:
         super().__init__()
         self.goal_uuid = goal_sensor_uuid
@@ -1249,16 +1605,32 @@ class ResnetTensorGoalEncoder(nn.Module):
         self.goal_dims = goal_dims
         self.resnet_hid_out_dims = resnet_compressor_hidden_out_dims
         self.combine_hid_out_dims = combiner_hidden_out_dims
+        self.batchnorm_mode = batchnorm_mode
         self.embed_goal = nn.Linear(2, self.goal_dims)
         self.blind = self.resnet_uuid not in observation_spaces.spaces
         if not self.blind:
             self.resnet_tensor_shape = observation_spaces.spaces[self.resnet_uuid].shape
-            self.resnet_compressor = nn.Sequential(
-                nn.Conv2d(self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1),
-                nn.ReLU(),
-                nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
-                nn.ReLU(),
-            )
+
+            if self.batchnorm_mode:
+                self.resnet_compressor = nn.Sequential(
+                    nn.Conv2d(
+                        self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1
+                    ),
+                    nn.BatchNorm2d(self.resnet_hid_out_dims[0]),
+                    nn.ReLU(),
+                    nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
+                    # nn.BatchNorm2d(self.resnet_hid_out_dims[1]),
+                    nn.ReLU(),
+                )
+            else:
+                self.resnet_compressor = nn.Sequential(
+                    nn.Conv2d(
+                        self.resnet_tensor_shape[0], self.resnet_hid_out_dims[0], 1
+                    ),
+                    nn.ReLU(),
+                    nn.Conv2d(*self.resnet_hid_out_dims[0:2], 1),
+                    nn.ReLU(),
+                )
             self.target_obs_combiner = nn.Sequential(
                 nn.Conv2d(
                     self.resnet_hid_out_dims[1] + self.goal_dims,
