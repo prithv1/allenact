@@ -4,7 +4,7 @@
 # Clean
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_clean_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt
 
@@ -12,7 +12,7 @@ python main.py \
 # Pixelate S5
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_pixelate_s5_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Pixelate \
@@ -21,7 +21,7 @@ python main.py \
 # Pixelate S3
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_pixelate_s3_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Pixelate \
@@ -30,7 +30,7 @@ python main.py \
 # Gaussian Noise S5
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_gaussian_noise_s5_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Gaussian_Noise \
@@ -39,7 +39,7 @@ python main.py \
 # Gaussian Noise S3
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_gaussian_noise_s3_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Gaussian_Noise \
@@ -48,7 +48,7 @@ python main.py \
 # Lighting S5
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_lighting_s5_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Lighting \
@@ -57,7 +57,7 @@ python main.py \
 # Lighting S3
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_lighting_s3_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Lighting \
@@ -66,7 +66,7 @@ python main.py \
 # Spatter S5
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_spatter_s5_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Spatter \
@@ -75,7 +75,7 @@ python main.py \
 # Spatter S3
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_spatter_s3_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Spatter \
@@ -84,7 +84,7 @@ python main.py \
 # Contrast S5
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_contrast_s5_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Contrast \
@@ -93,7 +93,7 @@ python main.py \
 # Contrast S3
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_contrast_s3_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Contrast \
@@ -102,7 +102,7 @@ python main.py \
 # Motion Blur S5
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_motion_blur_s5_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Motion_Blur \
@@ -111,7 +111,7 @@ python main.py \
 # Motion Blur S3
 python main.py \
     -o storage/robothor-pointnav-rgb-resnet \
-    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_resnet_rgb_ddppo_g4dn12x_large_corr_finetune \
+    -b projects/tutorials/pointnav_aws_configs pointnav_robothor_general_rgb_ddppo_g4dn_12xlarge_corr_finetune \
     -et v1_motion_blur_s3_corr_finetune \
     -c /home/ubuntu/projects/allenact/storage/robothor-pointnav-rgb-resnet/checkpoints/PointNavRobothorRGBPPO/v1_vanilla_ec2_p3_8x_large/2020-10-03_08-04-27/exp_PointNavRobothorRGBPPO_v1_vanilla_ec2_p3_8x_large__stage_00__steps_000075006000.pt \
     -vc Motion_Blur \
