@@ -1,15 +1,18 @@
+from abc import ABC
+from typing import Optional
+
 from core.base_abstractions.experiment_config import ExperimentConfig
 
 
-class PointNavBaseConfig(ExperimentConfig):
+class PointNavBaseConfig(ExperimentConfig, ABC):
     """An Object Navigation experiment configuration in iThor."""
 
     def __init__(self):
-        self.CAMERA_WIDTH = 640
-        self.CAMERA_HEIGHT = 480
+        self.CAMERA_WIDTH = 400
+        self.CAMERA_HEIGHT = 300
         self.SCREEN_SIZE = 224
         self.MAX_STEPS = 500
-        self.ADVANCE_SCENE_ROLLOUT_PERIOD = None
+        self.ADVANCE_SCENE_ROLLOUT_PERIOD: Optional[int] = None
         self.STEP_SIZE = 0.25
         self.ROTATION_DEGREES = 30.0
         self.DISTANCE_TO_GOAL = 0.2

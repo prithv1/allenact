@@ -6,14 +6,11 @@ Facebook's Habitat.
 import typing
 from typing import Tuple, Dict, Optional, cast
 
-import copy
-
 import gym
 import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.models.basic_models import SimpleCNN, RNNStateEncoder
 from core.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
@@ -22,8 +19,9 @@ from core.algorithms.onpolicy_sync.policy import (
     Memory,
     ObservationType,
 )
-from core.base_abstractions.misc import ActorCriticOutput
 from core.base_abstractions.distributions import CategoricalDistr
+from core.base_abstractions.misc import ActorCriticOutput
+from core.models.basic_models import SimpleCNN, RNNStateEncoder
 
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -116,6 +114,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
+        # noinspection PyTypeChecker
         return self.object_type_embedding(  # type:ignore
             observations[self.goal_sensor_uuid].to(torch.int64)
         )
@@ -176,20 +175,15 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         goal_dims: int = 32,
         resnet_compressor_hidden_out_dims: Tuple[int, int] = (128, 32),
         combiner_hidden_out_dims: Tuple[int, int] = (128, 32),
-        inv_mode: bool = False,
-        inv_recurrent: bool = False,
-        rot_mode: bool = False,
+        include_auxiliary_head: bool = False,
     ):
 
         super().__init__(
             action_space=action_space, observation_space=observation_space,
         )
 
-        # Intrinsic Curiousity Module Arguments
-        self.inv_mode = inv_mode
-        self.inv_recurrent = inv_recurrent
-        self.rot_mode = rot_mode
         self._hidden_size = hidden_size
+        self.include_auxiliary_head = include_auxiliary_head
         if (
             rgb_resnet_preprocessor_uuid is None
             or depth_resnet_preprocessor_uuid is None
@@ -222,14 +216,8 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         )
         self.actor = LinearActorHead(self._hidden_size, action_space.n)
         self.critic = LinearCriticHead(self._hidden_size)
-
-        if self.inv_mode:
-            self.inverse_model = InverseModel(
-                action_space, self.goal_visual_encoder.output_dims,
-            )
-
-        if self.rot_mode:
-            self.rotation_model = RotationModel(self.goal_visual_encoder.output_dims)
+        if self.include_auxiliary_head:
+            self.auxiliary_actor = LinearActorHead(self._hidden_size, action_space.n)
 
         self.train()
 
@@ -267,22 +255,6 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         """Get the object type encoding from input batched observations."""
         return self.goal_visual_encoder.get_object_type_encoding(observations)
 
-    # def forward(  # type:ignore
-    #     self,
-    #     observations: ObservationType,
-    #     memory: Memory,
-    #     prev_actions: torch.Tensor,
-    #     masks: torch.FloatTensor,
-    # ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
-    #     x = self.goal_visual_encoder(observations)
-    #     x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
-    #     return (
-    #         ActorCriticOutput(
-    #             distributions=self.actor(x), values=self.critic(x), extras={}
-    #         ),
-    #         memory.set_tensor("rnn", rnn_hidden_states),
-    #     )
-
     def forward(  # type:ignore
         self,
         observations: ObservationType,
@@ -290,107 +262,18 @@ class ResnetTensorObjectNavActorCritic(ActorCriticModel[CategoricalDistr]):
         prev_actions: torch.Tensor,
         masks: torch.FloatTensor,
     ) -> Tuple[ActorCriticOutput[DistributionType], Optional[Memory]]:
-        obs_encoding = self.goal_visual_encoder(observations)
-
-        # Action-Prediction
-        action_logits = None
-        if self.inv_mode:
-            curr_obs_encoding = obs_encoding
-            next_obs_encoding = obs_encoding.roll(-1, 0)
-            next_obs_encoding[obs_encoding.size(0) - 1, :, :] = next_obs_encoding[
-                obs_encoding.size(0) - 2, :, :
-            ]
-            action_logits = self.inverse_model(curr_obs_encoding, next_obs_encoding)
-
-        # Recurrent Controller
-        obs_encoding, rnn_hidden_states = self.state_encoder(
-            obs_encoding, memory.tensor("rnn"), masks
-        )
-
-        print("Hidden State Shape", rnn_hidden_states.shape)
+        x = self.goal_visual_encoder(observations)
+        x, rnn_hidden_states = self.state_encoder(x, memory.tensor("rnn"), masks)
         return (
             ActorCriticOutput(
-                distributions=self.actor(obs_encoding),
-                values=self.critic(obs_encoding),
-                extras={"pred_action_logits": action_logits},
+                distributions=self.actor(x),
+                values=self.critic(x),
+                extras={"auxiliary_distributions": self.auxiliary_actor(x)}
+                if self.include_auxiliary_head
+                else {},
             ),
             memory.set_tensor("rnn", rnn_hidden_states),
         )
-
-    # def action_prediction(self, observations):
-    #     # Depending on whether recurrent mode is on or not
-    #     # Take the output of either the visual encoder or
-    #     # the recurrent hidden state
-    #     if self.inv_recurrent:
-    #         pass
-    #     else:
-    #         (
-    #             observations,
-    #             use_agent,
-    #             nstep,
-    #             nsampler,
-    #             nagent,
-    #         ) = self.goal_visual_encoder.adapt_input(observations)
-    #         obs_encoding = self.goal_visual_encoder.compress_resnet(observations)
-    #         obs_encoding = obs_encoding.view(obs_encoding.size(0), -1)
-    #         obs_encoding = self.goal_visual_encoder.adapt_output(
-    #             obs_encoding, use_agent, nstep, nsampler, nagent
-    #         )
-    #         curr_obs_encoding = obs_encoding
-    #         next_obs_encoding = obs_encoding.roll(-1, 0)
-    #         next_obs_encoding[obs_encoding.size(0) - 1, :, :] = next_obs_encoding[
-    #             obs_encoding.size(0) - 2, :, :
-    #         ]
-    #         action_logits = self.inverse_model(curr_obs_encoding, next_obs_encoding)
-    #     return action_logits
-
-    # Predict rotation
-    def rotation_prediction(self, observation):
-        obs_encoding = self.goal_visual_encoder.compress_resnet(observation)
-        rotation_logits = self.rotation_model(obs_encoding)
-        return rotation_logits
-
-
-class InverseModel(nn.Module):
-    def __init__(
-        self, action_space: gym.spaces.Discrete, state_size: int = 1568,
-    ):
-        super().__init__()
-        self.state_size = state_size
-        self.output_size = action_space.n - 1
-
-        # self.inverse_model = nn.Sequential(
-        #     nn.Linear(2 * state_size, 256), nn.ReLU(), nn.Linear(256, self.output_size),
-        # )
-
-        self.inverse_model = nn.Sequential(
-            nn.Linear(2 * state_size, 500),
-            nn.LayerNorm(500),
-            nn.Tanh(),
-            nn.Linear(500, 500),
-            nn.LayerNorm(500),
-            nn.Tanh(),
-            nn.Linear(500, self.output_size),
-        )
-
-    def forward(self, state, next_state):
-        action_pred = self.inverse_model(torch.cat([state, next_state], 2))
-        return action_pred
-
-
-class RotationModel(nn.Module):
-    def __init__(self, state_size: int = 1568):
-        super().__init__()
-        self.state_size = state_size
-
-        self.rotation_predictor = nn.Sequential(
-            nn.Linear(state_size, 256), nn.ReLU(), nn.Linear(256, 4),
-        )
-
-    def forward(self, state):
-        state = state.view(state.size(0), -1)
-        rotation_logits = self.rotation_predictor(state)
-        return rotation_logits
 
 
 class ResnetTensorGoalEncoder(nn.Module):
@@ -465,8 +348,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             -1, -1, self.resnet_tensor_shape[-2], self.resnet_tensor_shape[-1]
         )
 
-    def adapt_input(self, resnet_observations):
-        observations = copy.deepcopy(resnet_observations)
+    def adapt_input(self, observations):
         resnet = observations[self.resnet_uuid]
 
         use_agent = False
@@ -478,16 +360,13 @@ class ResnetTensorGoalEncoder(nn.Module):
         else:
             nstep, nsampler = resnet.shape[:2]
 
-        observations[self.resnet_uuid] = resnet.view(
-            -1, *resnet.shape[-3:]
-        )  # observations are generally mutable (hence the deepcopy earlier)
-        observations[self.goal_uuid] = observations[self.goal_uuid].view(
-            -1, 1
-        )  # observations are generally mutable (hence the deepcopy earlier)
+        observations[self.resnet_uuid] = resnet.view(-1, *resnet.shape[-3:])
+        observations[self.goal_uuid] = observations[self.goal_uuid].view(-1, 1)
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler * nagent, -1)
@@ -504,7 +383,7 @@ class ResnetTensorGoalEncoder(nn.Module):
             self.distribute_target(observations),
         ]
         x = self.target_obs_combiner(torch.cat(embs, dim=1,))
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)
 
@@ -626,7 +505,8 @@ class ResnetDualTensorGoalEncoder(nn.Module):
 
         return observations, use_agent, nstep, nsampler, nagent
 
-    def adapt_output(self, x, use_agent, nstep, nsampler, nagent):
+    @staticmethod
+    def adapt_output(x, use_agent, nstep, nsampler, nagent):
         if use_agent:
             return x.view(nstep, nsampler, nagent, -1)
         return x.view(nstep, nsampler * nagent, -1)
@@ -649,6 +529,6 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         ]
         depth_x = self.depth_target_obs_combiner(torch.cat(depth_embs, dim=1,))
         x = torch.cat([rgb_x, depth_x], dim=1)
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.reshape(x.size(0), -1)  # flatten
 
         return self.adapt_output(x, use_agent, nstep, nsampler, nagent)

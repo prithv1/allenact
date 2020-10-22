@@ -1,12 +1,7 @@
-"""
-[TODO] -- Add random-shift as implemented in https://arxiv.org/pdf/2004.13649.pdf
-"""
-
 # Original work Copyright (c) Facebook, Inc. and its affiliates.
 # Modified work Copyright (c) Allen Institute for AI
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
 from abc import abstractmethod, ABC
 from collections import OrderedDict
 from typing import (
@@ -21,21 +16,18 @@ from typing import (
     Tuple,
 )
 
+import PIL
 import gym
-import copy
 import numpy as np
 import torch
-
-import core.base_abstractions.rgb_sensor_degradations as degradations
-
 from gym.spaces import Dict as SpaceDict
 from torch import nn
 from torchvision import transforms, models
 
 from core.base_abstractions.misc import EnvType
 from utils.misc_utils import prepare_locals_for_super
+from utils.model_utils import Flatten
 from utils.tensor_utils import ScaleBothSides
-from core.models.basic_models import Flatten
 
 if TYPE_CHECKING:
     from core.base_abstractions.task import SubTaskType
@@ -231,110 +223,6 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         )
 
 
-class RotationSensor(Sensor[EnvType, SubTaskType]):
-    def __init__(self, uuid: str = "rot_label", **kwargs: Any):
-        observation_space = self._get_observation_space()
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def _get_observation_space(self) -> gym.spaces.Discrete:
-        return gym.spaces.Discrete(4)
-
-    def get_observation(
-        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
-    ) -> Any:
-        return 0
-
-
-class SeparateRotatedVisionSensor(Sensor[EnvType, SubTaskType]):
-    def __init__(
-        self,
-        mean: Optional[np.ndarray] = np.array(
-            [[[0.485, 0.456, 0.406]]], dtype=np.float32
-        ),
-        stdev: Optional[np.ndarray] = np.array(
-            [[[0.229, 0.224, 0.225]]], dtype=np.float32
-        ),
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        uuid: str = "sep_rot_rgb",
-        output_shape: Optional[Tuple[int, ...]] = None,
-        output_channels: int = 3,
-        unnormalized_infimum: float = 0.0,
-        unnormalized_supremum: float = 1.0,
-        **kwargs: Any
-    ):
-        self._norm_means = mean
-        self._norm_sds = stdev
-        assert (self._norm_means is None) == (self._norm_sds is None), (
-            "In SeparateRotatedVisionSensor's config, "
-            "either both mean/stdev must be None or neither."
-        )
-        self._should_normalize = self._norm_means is not None
-
-        self._height = height
-        self._width = width
-        assert (self._width is None) == (self._height is None), (
-            "In SeparateRotatedVisionSensor's config, "
-            "either both height/width must be None or neither."
-        )
-
-        observation_space = self._get_observation_space(
-            output_shape=output_shape,
-            output_channels=output_channels,
-            unnormalized_infimum=unnormalized_infimum,
-            unnormalized_supremum=unnormalized_supremum,
-        )
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def _get_observation_space(
-        self,
-        output_shape: Optional[Tuple[int, ...]],
-        output_channels: Optional[int],
-        unnormalized_infimum: float,
-        unnormalized_supremum: float,
-    ) -> gym.spaces.Box:
-        assert output_shape is None or output_channels is None, (
-            "In VisionSensor's config, "
-            "only one of output_shape and output_channels can be not None."
-        )
-
-        shape: Optional[Tuple[int, ...]] = None
-        if output_shape is not None:
-            shape = output_shape
-        elif self._height is not None and output_channels is not None:
-            shape = (
-                cast(int, self._height),
-                cast(int, self._width),
-                cast(int, output_channels),
-            )
-
-        if not self._should_normalize or shape is None or len(shape) == 1:
-            return gym.spaces.Box(
-                low=np.float32(unnormalized_infimum),
-                high=np.float32(unnormalized_supremum),
-                shape=shape,
-            )
-        else:
-            out_shape = shape[:-1] + (1,)
-            low = np.tile(
-                (unnormalized_infimum - cast(np.ndarray, self._norm_means))
-                / cast(np.ndarray, self._norm_sds),
-                out_shape,
-            )
-            high = np.tile(
-                (unnormalized_supremum - cast(np.ndarray, self._norm_means))
-                / cast(np.ndarray, self._norm_sds),
-                out_shape,
-            )
-            return gym.spaces.Box(low=np.float32(low), high=np.float32(high))
-
-    def get_observation(
-        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
-    ) -> Any:
-        return 0
-
-
 class VisionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
         self,
@@ -364,41 +252,6 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
-        # Support corruptions in the vision sensor
-        def f(x, k, default):
-            return x[k] if k in x else default
-
-        self._random_crop: Optional[bool] = f(kwargs, "random_crop", False)
-        self._crop_height: Optional[int] = f(kwargs, "crop_height", None)
-        self._crop_width: Optional[int] = f(kwargs, "crop_width", None)
-        self._jitter: Optional[bool] = f(kwargs, "color_jitter", False)
-
-        # Parse corruption details
-        # Additional inputs are
-        # - a list of corruptions
-        # - a list of severities
-        self._corruptions = f(kwargs, "corruptions", None)
-        self._severities = f(kwargs, "severities", None)
-
-        print("Applied corruptions are ")
-        print(self._corruptions)
-        print(self._severities)
-
-        # Whether to rotate the observation or not
-        self._sep_rotate: bool = f(kwargs, "sep_rotate", False)
-
-        self._rotate: bool = f(kwargs, "rotate", False)
-        self._rotate_prob: float = f(kwargs, "rotate_prob", None)
-        if self._rotate_prob is not None:
-            self._rotate_prob = [self._rotate_prob] + [(1 - self._rotate_prob) / 3] * 3
-            self._rotate_prob = [
-                float(x) / sum(self._rotate_prob) for x in self._rotate_prob
-            ]
-
-        assert not (
-            self._rotate and self._sep_rotate
-        ), "Both rotate and separate rotate mode cannot be active together"
-
         self._norm_means = mean
         self._norm_sds = stdev
         assert (self._norm_means is None) == (self._norm_sds is None), (
@@ -422,17 +275,6 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
                 width=cast(int, self._width), height=cast(int, self._height)
             )
 
-        # Data augmentation options
-        self._random_cropper = (
-            None
-            if not self._random_crop
-            else transforms.RandomCrop((self._crop_height, self._crop_width))
-        )
-
-        self._color_jitter = (
-            None if not self._jitter else transforms.ColorJitter(0.4, 0.4, 0.4, 0.4)
-        )
-
         self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
 
         observation_space = self._get_observation_space(
@@ -440,6 +282,10 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             output_channels=output_channels,
             unnormalized_infimum=unnormalized_infimum,
             unnormalized_supremum=unnormalized_supremum,
+        )
+
+        assert int(PIL.__version__.split(".")[0]) < 7, (
+            "Pillow version >=7.0.0 is very broken, please downgrade" "to version 6.2.1"
         )
 
         super().__init__(**prepare_locals_for_super(locals()))
@@ -514,101 +360,31 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
     ) -> Any:
         im = self.frame_from_env(env)
-
-        # Apply sequence of corruptions to
-        # the RGB frames
-        if self._corruptions is not None:
-            im = degradations.apply_corruption_sequence(
-                np.array(im), self._corruptions, self._severities
-            )
-
-        # Random Crop Image
-        if self._random_crop:
-            if isinstance(im, np.ndarray):
-                im = self.to_pil(im)
-            im = self._random_cropper(im)
-
-        # Color Jitter
-        if self._jitter:
-            if isinstance(im, np.ndarray):
-                im = self.to_pil(im)
-            im = self._color_jitter(im)
-
-        if self._sep_rotate:
-            rot_im = copy.deepcopy(im)
-
-        if self._rotate:
-            if not isinstance(im, np.ndarray):
-                im = np.array(im)
-            im, rot_label = degradations.rotate_single(im, self._rotate_prob)
-
-        if self._sep_rotate:
-            if not isinstance(rot_im, np.ndarray):
-                rot_im = np.array(im)
-            rot_im, rot_label = degradations.rotate_single(rot_im, self._rotate_prob)
+        assert (im.shape[-1] == 1 and im.dtype == np.float32) or (
+            im.shape[-1] == 3 and im.dtype == np.uint8
+        ), (
+            "Input frame must either have 3 channels and be of"
+            " type np.uint8 or have one channel and be of type np.float32"
+        )
 
         if self._scale_first:
-            if not isinstance(im, np.ndarray):
-                shape_condition = im.size[:2] != (self._height, self._width)
-            else:
-                shape_condition = im.shape[:2] != (self._height, self._width)
-                im = self.to_pil(im)
-            if self.scaler is not None and shape_condition:
-                im = np.array(self.scaler(im), dtype=np.uint8)  # hwc
-
-            if self._sep_rotate:
-                if not isinstance(rot_im, np.ndarray):
-                    shape_condition = rot_im.size[:2] != (self._height, self._width)
-                else:
-                    shape_condition = rot_im.shape[:2] != (self._height, self._width)
-                    rot_im = self.to_pil(rot_im)
-                if self.scaler is not None and shape_condition:
-                    rot_im = np.array(self.scaler(rot_im), dtype=np.uint8)  # hwc
-
-        # if self._scale_first:
-        #     if self.scaler is not None and im.shape[:2] != (self._height, self._width):
-        #         im = np.array(self.scaler(self.to_pil(im)), dtype=np.uint8)  # hwc
+            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
+                im = np.array(self.scaler(self.to_pil(im)), dtype=im.dtype)  # hwc
 
         assert im.dtype in [np.uint8, np.float32]
 
-        if self._sep_rotate:
-            assert rot_im.dtype in [np.uint8, np.float32]
-
         if im.dtype == np.uint8:
             im = im.astype(np.float32) / 255.0
-
-        if self._sep_rotate:
-            if rot_im.dtype == np.uint8:
-                rot_im = rot_im.astype(np.float32) / 255.0
 
         if self._should_normalize:
             im -= self._norm_means
             im /= self._norm_sds
 
-        if self._sep_rotate:
-            if self._should_normalize:
-                rot_im -= self._norm_means
-                rot_im /= self._norm_sds
-
         if not self._scale_first:
             if self.scaler is not None and im.shape[:2] != (self._height, self._width):
                 im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
 
-            if self._sep_rotate:
-                if self.scaler is not None and rot_im.shape[:2] != (
-                    self._height,
-                    self._width,
-                ):
-                    rot_im = np.array(
-                        self.scaler(self.to_pil(rot_im)), dtype=np.float32
-                    )  # hwc
-
-        if self._rotate:
-            return (im, rot_label)
-        elif self._sep_rotate:
-            return (im, rot_im, rot_label)
-        else:
-            return im
+        return im
 
 
 class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):

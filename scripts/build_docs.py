@@ -3,11 +3,11 @@ import os
 import shutil
 from pathlib import Path
 from subprocess import check_output
-from typing import Dict, Union, Optional, Set, List, Sequence, Mapping
 from threading import Thread
+from typing import Dict, Union, Optional, Set, List, Sequence, Mapping
 
 from git import Git
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML  # type: ignore
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
 
@@ -69,15 +69,14 @@ def render_file(
                 Data: 3,
             }
         }
-    }'""".replace(
-        "\n", " "
-    )
+    }'"""
+    pydoc_config = " ".join(pydoc_config.split())
     args = ["pydoc-markdown", "-m", namespace, pydoc_config]
     try:
-        with open(os.devnull, "w") as devnull:
-            call_result = check_output(
-                [" ".join(args)], shell=True, env=os.environ, stderr=devnull
-            ).decode("utf-8")
+        call_result = check_output([" ".join(args)], shell=True, env=os.environ).decode(
+            "utf-8"
+        )
+
         # noinspection PyShadowingNames
         with open(to_file, "w") as f:
             doc_split = call_result.split("\n")
@@ -231,7 +230,7 @@ def pruned_nav_entries(nav_entries):
         raise NotImplementedError()
 
 
-if __name__ == "__main__":
+def main():
     os.chdir(ABS_PATH_OF_TOP_LEVEL_DIR)
 
     print("Copying all README.md files to docs.")
@@ -286,7 +285,7 @@ if __name__ == "__main__":
     git_dirs = set(
         os.path.abspath(os.path.split(p)[0]) for p in Git(".").ls_files().split("\n")
     )
-    ignore_rel_dirs = ["docs", "scripts", "experiments"]
+    ignore_rel_dirs = ["docs", "scripts", "experiments", "src", ".pip_src"]
     ignore_abs_dirs = set(
         os.path.abspath(os.path.join(str(parent_folder_path), rel_dir))
         for rel_dir in ignore_rel_dirs
@@ -323,3 +322,7 @@ if __name__ == "__main__":
 
     with open(yaml_path, "w") as f:
         yaml.dump(mkdocs_yaml, f)
+
+
+if __name__ == "__main__":
+    main()

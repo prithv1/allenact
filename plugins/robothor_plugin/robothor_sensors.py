@@ -1,4 +1,4 @@
-from typing import Any, Tuple, List, Dict, Optional
+from typing import Any, Tuple, Optional
 
 import gym
 import numpy as np
@@ -7,7 +7,7 @@ import quaternion  # noqa # pylint: disable=unused-import
 from core.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
 from core.base_abstractions.task import Task
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
-from plugins.robothor_plugin.robothor_tasks import PointNavTask, ObjectNavTask
+from plugins.robothor_plugin.robothor_tasks import PointNavTask
 from utils.misc_utils import prepare_locals_for_super
 
 
@@ -130,50 +130,3 @@ class DepthSensorRoboThor(DepthSensor[RoboThorEnvironment, Task[RoboThorEnvironm
 
     def frame_from_env(self, env: RoboThorEnvironment) -> np.ndarray:
         return env.current_depth.copy()
-
-
-class GoalObjectTypeRoboThorSensor(Sensor):
-    def __init__(
-        self,
-        object_types: List[str],
-        target_to_detector_map: Optional[Dict[str, str]] = None,
-        detector_types: Optional[List[str]] = None,
-        uuid: str = "goal_object_type_ind",
-        **kwargs: Any
-    ):
-        self.ordered_object_types = list(object_types)
-        assert self.ordered_object_types == sorted(
-            self.ordered_object_types
-        ), "object types input to goal object type sensor must be ordered"
-
-        if target_to_detector_map is None:
-            self.object_type_to_ind = {
-                ot: i for i, ot in enumerate(self.ordered_object_types)
-            }
-
-            observation_space = gym.spaces.Discrete(len(self.ordered_object_types))
-        else:
-            assert (
-                detector_types is not None
-            ), "Missing detector_types for map {}".format(target_to_detector_map)
-            self.target_to_detector = target_to_detector_map
-            self.detector_types = detector_types
-
-            detector_index = {ot: i for i, ot in enumerate(self.detector_types)}
-            self.object_type_to_ind = {
-                ot: detector_index[self.target_to_detector[ot]]
-                for ot in self.ordered_object_types
-            }
-
-            observation_space = gym.spaces.Discrete(len(self.detector_types))
-
-        super().__init__(**prepare_locals_for_super(locals()))
-
-    def get_observation(
-        self,
-        env: RoboThorEnvironment,
-        task: Optional[ObjectNavTask],
-        *args: Any,
-        **kwargs: Any
-    ) -> Any:
-        return self.object_type_to_ind[task.task_info["object_type"]]
