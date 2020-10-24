@@ -460,6 +460,9 @@ class ObjectNavDatasetTaskSampler(TaskSampler):
         task_info["path_to_target"] = episode["shortest_path"]
         task_info["object_type"] = episode["object_type"]
         task_info["id"] = episode["id"]
+        task_info["difficulty"] = episode[
+            "difficulty"
+        ]  # Also log difficulty of the task
         if self.allow_flipping and random.random() > 0.5:
             task_info["mirrored"] = True
         else:
@@ -848,6 +851,7 @@ class PointNavDatasetTaskSampler(TaskSampler):
             "shortest_path": episode["shortest_path"],
             "distance_to_target": episode["shortest_path_length"],
             "id": episode["id"],
+            "difficulty": episode["difficulty"],
         }
 
         if self.allow_flipping and random.random() > 0.5:

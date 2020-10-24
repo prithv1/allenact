@@ -20,6 +20,9 @@ import PIL
 import gym
 import numpy as np
 import torch
+
+import core.base_abstractions.rgb_sensor_degradations as degradations
+
 from gym.spaces import Dict as SpaceDict
 from torch import nn
 from torchvision import transforms, models
@@ -252,6 +255,27 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         kwargs : Extra kwargs. Currently unused.
         """
 
+        print("UUID is ", uuid)
+
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        self._random_crop: Optional[bool] = f(kwargs, "random_crop", False)
+        self._crop_height: Optional[int] = f(kwargs, "crop_height", None)
+        self._crop_width: Optional[int] = f(kwargs, "crop_width", None)
+        self._jitter: Optional[bool] = f(kwargs, "color_jitter", False)
+
+        # Parse corruption details
+        # Additional inputs are
+        # - a list of corruptions
+        # - a list of severities
+        self._corruptions = f(kwargs, "corruptions", None)
+        self._severities = f(kwargs, "severities", None)
+
+        print("Applied corruptions are ")
+        print(self._corruptions)
+        print(self._severities)
+
         self._norm_means = mean
         self._norm_sds = stdev
         assert (self._norm_means is None) == (self._norm_sds is None), (
@@ -274,6 +298,17 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             self.scaler = ScaleBothSides(
                 width=cast(int, self._width), height=cast(int, self._height)
             )
+
+        # Data augmentation options
+        self._random_cropper = (
+            None
+            if not self._random_crop
+            else transforms.RandomCrop((self._crop_height, self._crop_width))
+        )
+
+        self._color_jitter = (
+            None if not self._jitter else transforms.ColorJitter(0.4, 0.4, 0.4, 0.4)
+        )
 
         self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
 
@@ -367,9 +402,38 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             " type np.uint8 or have one channel and be of type np.float32"
         )
 
+        # Apply sequence of corruptions to
+        # the RGB frames
+        if self._corruptions is not None:
+            im = degradations.apply_corruption_sequence(
+                np.array(im), self._corruptions, self._severities
+            )
+
+        # Random Crop Image
+        if self._random_crop:
+            if isinstance(im, np.ndarray):
+                im = self.to_pil(im)
+            im = self._random_cropper(im)
+
+        # Color Jitter
+        if self._jitter:
+            if isinstance(im, np.ndarray):
+                im = self.to_pil(im)
+            im = self._color_jitter(im)
+
         if self._scale_first:
-            if self.scaler is not None and im.shape[:2] != (self._height, self._width):
-                im = np.array(self.scaler(self.to_pil(im)), dtype=im.dtype)  # hwc
+            if not isinstance(im, np.ndarray):
+                shape_condition = im.size[:2] != (self._height, self._width)
+            else:
+                shape_condition = im.shape[:2] != (self._height, self._width)
+                im = self.to_pil(im)
+            if self.scaler is not None and shape_condition:
+                im = np.array(self.scaler(im), dtype=np.uint8)  # hwc
+
+        # Original
+        # if self._scale_first:
+        #     if self.scaler is not None and im.shape[:2] != (self._height, self._width):
+        #         im = np.array(self.scaler(self.to_pil(im)), dtype=im.dtype)  # hwc
 
         assert im.dtype in [np.uint8, np.float32]
 
@@ -380,7 +444,7 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             im -= self._norm_means
             im /= self._norm_sds
 
-        if not self._scale_first:
+        if not self._scale_first:  # Fix to be covered later
             if self.scaler is not None and im.shape[:2] != (self._height, self._width):
                 im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
 
@@ -459,13 +523,13 @@ class DepthSensor(VisionSensor[EnvType, SubTaskType], ABC):
 
         super().__init__(**prepare_locals_for_super(locals()))
 
-    def get_observation(  # type: ignore
-        self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
-    ) -> Any:
-        depth = super().get_observation(env, task, *args, **kwargs)
-        depth = np.expand_dims(depth, 2)
+    # def get_observation(  # type: ignore
+    #     self, env: EnvType, task: Optional[SubTaskType], *args: Any, **kwargs: Any
+    # ) -> Any:
+    #     depth = super().get_observation(env, task, *args, **kwargs)
+    #     depth = np.expand_dims(depth, 2)
 
-        return depth
+    #     return depth
 
 
 class ResNetSensor(VisionSensor[EnvType, SubTaskType], ABC):

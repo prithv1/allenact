@@ -5,7 +5,7 @@ import numpy as np
 
 from plugins.ithor_plugin.ithor_environment import IThorEnvironment
 from plugins.ithor_plugin.ithor_tasks import ObjectNavTask
-from core.base_abstractions.sensor import Sensor, RGBSensor
+from core.base_abstractions.sensor import Sensor, RGBSensor, DepthSensor
 from core.base_abstractions.task import Task
 from utils.misc_utils import prepare_locals_for_super
 
@@ -19,6 +19,19 @@ class RGBSensorThor(RGBSensor[IThorEnvironment, Task[IThorEnvironment]]):
 
     def frame_from_env(self, env: IThorEnvironment) -> np.ndarray:
         return env.current_frame.copy()
+
+
+class DepthSensorThor(DepthSensor[IThorEnvironment, Task[IThorEnvironment]]):
+    """Sensor for Depth images in iTHOR.
+
+    Returns from a running IThorEnvironment instance, the current Depth
+    frame corresponding to the agent's egocentric view.
+    """
+
+    def frame_from_env(self, env: IThorEnvironment) -> np.ndarray:
+        depth = env.current_depth.copy()
+        depth = np.expand_dims(depth, 2)
+        return depth
 
 
 class GoalObjectTypeThorSensor(Sensor):

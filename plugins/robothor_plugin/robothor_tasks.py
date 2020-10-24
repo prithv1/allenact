@@ -2,6 +2,7 @@ import math
 from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
+import copy
 import numpy as np
 
 from core.base_abstractions.misc import RLStepResult
@@ -17,6 +18,8 @@ from plugins.robothor_plugin.robothor_constants import (
 )
 from plugins.robothor_plugin.robothor_environment import RoboThorEnvironment
 from utils.system import get_logger
+
+EPS = 1e-8
 
 
 class PointNavTask(Task[RoboThorEnvironment]):
@@ -51,6 +54,24 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
         self.task_info["followed_path"] = [self.env.agent_state()]
         self.task_info["action_names"] = self.action_names()
+        self.task_info[
+            "taken_actions"
+        ] = []  # Keep a log of actions taken by the agent per-step in an episode
+        self.task_info[
+            "action_success"
+        ] = []  # Track if per-step actions were successful or not
+        self.task_info["shaped_rew"] = []  # Track the per-step shaped rewards
+        self.task_info[
+            "goal_in_range"
+        ] = []  # Track if the goal was in range w.r.t. an undertaken action
+        self.task_info[
+            "far_from_goal"
+        ] = []  # Track the distance to goal w.r.t. an undertaken action
+        self.task_info[
+            "took_end_action"
+        ]: bool = False  # Whether or not the end action was called
+        self.task_info["ep_rewards"] = []  # Track reward per step
+
         self.num_moves_made = 0
 
     @property
@@ -72,19 +93,28 @@ class PointNavTask(Task[RoboThorEnvironment]):
         action = cast(int, action)
 
         action_str = self.action_names()[action]
+        self.task_info["taken_actions"].append(action_str)
 
         if action_str == END:
             self._took_end_action = True
+            self.task_info["took_end_action"] = self._took_end_action
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
+            self.task_info["action_success"].append(self.last_action_success)
         else:
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
+            self.task_info["action_success"].append(self.last_action_success)
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ["x", "y", "z"]})
             self.task_info["followed_path"].append(pose)
         if len(self.path) > 1 and self.path[-1] != self.path[-2]:
             self.num_moves_made += 1
+
+        self.task_info["shaped_rew"].append(self.shaping())
+        self.task_info["goal_in_range"].append(self._is_goal_in_range())
+        self.task_info["far_from_goal"].append(self.dist_to_target())
+
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
@@ -149,6 +179,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 )
 
         self._rewards.append(float(reward))
+        self.task_info["ep_rewards"].append(float(reward))
         return float(reward)
 
     def spl(self):
@@ -162,6 +193,29 @@ class PointNavTask(Task[RoboThorEnvironment]):
     def dist_to_target(self):
         return self.env.distance_to_point(self.task_info["target"])
 
+    def soft_progress(self):
+        """
+        Compute soft-progress made towards the goal
+        """
+        d_init = self.optimal_distance
+        d_T = self.dist_to_target()
+        if d_init >= 0 and d_T >= 0:
+            succ_fac = max(0, 1.0 - (d_T / (d_init + 1e-8)))
+        else:
+            succ_fac = 0.0
+        return succ_fac
+
+    def soft_spl(self):
+        """
+        Compute the soft-SPL metric
+        """
+        succ_fac = self.soft_progress()
+        li = self.optimal_distance
+        pi = self.num_moves_made * self.env.config["gridSize"]
+        pl_ratio = li / (max(pi, li) + 1e-8)
+        res = succ_fac * pl_ratio
+        return res
+
     def metrics(self) -> Dict[str, Any]:
         if not self.is_done():
             return {}
@@ -174,6 +228,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
         dist2tget = self.dist_to_target()
         spl = self.spl()
+        soft_progress = self.soft_progress()
+        soft_spl = self.soft_spl()
 
         return {
             **super(PointNavTask, self).metrics(),
@@ -181,6 +237,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
             "total_reward": total_reward,
             "dist_to_target": dist2tget,
             "spl": spl,
+            "soft_progress": soft_progress,
+            "soft_spl": soft_spl,
         }
 
 
@@ -214,9 +272,26 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.path: List = (
             []
         )  # the initial coordinate will be directly taken from the optimal path
+
         self.task_info["followed_path"] = [self.env.agent_state()]
-        self.task_info["taken_actions"] = []
         self.task_info["action_names"] = self.action_names()
+        self.task_info[
+            "taken_actions"
+        ] = []  # Keep a log of actions taken by the agent per-step in an episode
+        self.task_info[
+            "action_success"
+        ] = []  # Track if per-step actions were successful or not
+        self.task_info["shaped_rew"] = []  # Track the per-step shaped rewards
+        self.task_info[
+            "goal_in_range"
+        ] = []  # Track if the goal was in range w.r.t. an undertaken action
+        self.task_info[
+            "far_from_goal"
+        ] = []  # Track the distance to goal w.r.t. an undertaken action
+        self.task_info[
+            "took_end_action"
+        ]: bool = False  # Whether or not the end action was called
+        self.task_info["ep_rewards"] = []  # Track reward per step
 
         self.num_moves_made = 0
         self.optimal_distance = self.last_geodesic_distance
@@ -252,16 +327,26 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
         if action_str == END:
             self._took_end_action = True
+            self.task_info["took_end_action"] = self._took_end_action
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
+            self.task_info["action_success"].append(self.last_action_success)
         else:
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
+            self.task_info["action_success"].append(self.last_action_success)
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ["x", "y", "z"]})
             self.task_info["followed_path"].append(pose)
         if len(self.path) > 1 and self.path[-1] != self.path[-2]:
             self.num_moves_made += 1
+
+        self.task_info["shaped_rew"].append(self.shaping())
+        self.task_info["goal_in_range"].append(self._is_goal_in_range())
+        self.task_info["far_from_goal"].append(
+            self.env.distance_to_object_type(self.task_info["object_type"])
+        )
+
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
@@ -338,6 +423,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                 reward += self.reward_configs["failed_stop_reward"]
 
         self._rewards.append(float(reward))
+        self.task_info["ep_rewards"].append(float(reward))
         return float(reward)
 
     def spl(self):
@@ -346,6 +432,29 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         li = self.optimal_distance
         pi = self.num_moves_made * self.env.config["gridSize"]
         res = li / (max(pi, li) + 1e-8)
+        return res
+
+    def soft_progress(self):
+        """
+        Compute soft-progress made towards the goal
+        """
+        d_init = self.optimal_distance
+        d_T = self.env.distance_to_object_type(self.task_info["object_type"])
+        if d_init >= 0 and d_T >= 0:
+            succ_fac = max(0, 1.0 - (d_T / (d_init + 1e-8)))
+        else:
+            succ_fac = 0.0
+        return succ_fac
+
+    def soft_spl(self):
+        """
+        Compute the soft-SPL metric
+        """
+        succ_fac = self.soft_progress()
+        li = self.optimal_distance
+        pi = self.num_moves_made * self.env.config["gridSize"]
+        pl_ratio = li / (max(pi, li) + 1e-8)
+        res = succ_fac * pl_ratio
         return res
 
     def get_observations(self, **kwargs) -> Any:
@@ -367,23 +476,30 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
         dist2tget = self.env.distance_to_object_type(self.task_info["object_type"])
 
-        if self._success:
-            li = self.optimal_distance
-            pi = self.num_moves_made * self.env.config["gridSize"]
-            if min(pi, li) < 0:
-                spl = -1.0
-            elif li == pi:
-                spl = 1.0
-            else:
-                spl = li / (max(pi, li))
-        else:
-            spl = 0.0
+        # if self._success:
+        #     li = self.optimal_distance
+        #     pi = self.num_moves_made * self.env.config["gridSize"]
+        #     if min(pi, li) < 0:
+        #         spl = -1.0
+        #     elif li == pi:
+        #         spl = 1.0
+        #     else:
+        #         spl = li / (max(pi, li))
+        # else:
+        #     spl = 0.0
+
+        spl = self.spl()
+        soft_progress = self.soft_progress()
+        soft_spl = self.soft_spl()
 
         metrics = {
             **super(ObjectNavTask, self).metrics(),
             "success": self._success,
             "total_reward": np.sum(self._rewards),
             "dist_to_target": dist2tget,
+            "spl": spl,
+            "soft_spl": soft_spl,
+            "soft_progress": soft_progress,
         }
         if spl >= 0:
             metrics["spl"] = spl

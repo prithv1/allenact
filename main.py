@@ -1,5 +1,9 @@
 """Entry point to training/validating/testing for a user given experiment
 name."""
+# Import these first to avoid
+# conflict with other imports
+import skimage
+import scipy
 
 import argparse
 import importlib
@@ -29,6 +33,7 @@ def get_args():
     )
 
     parser.add_argument(
+        "-et",
         "--extra_tag",
         type=str,
         default="",
@@ -130,6 +135,79 @@ def get_args():
         help="enable deterministic agents (i.e. always taking the mode action) during validation/testing",
     )
     parser.set_defaults(deterministic_agents=False)
+
+    parser.add_argument(
+        "-vc",
+        "--visual_corruption",
+        default=None,
+        type=str,
+        required=False,
+        help="What visual corruption to apply to the input egocentric observation",
+    )
+
+    parser.add_argument(
+        "-vs",
+        "--visual_severity",
+        default=0,
+        type=int,
+        required=False,
+        help="To what degree of severity should we apply the visual corruption",
+    )
+
+    parser.add_argument(
+        "-trd",
+        "--training_dataset",
+        default=None,
+        type=str,
+        required=False,
+        help="Specify the training dataset",
+    )
+
+    parser.add_argument(
+        "-vld",
+        "--validation_dataset",
+        default=None,
+        type=str,
+        required=False,
+        help="Specify the validation dataset",
+    )
+
+    parser.add_argument(
+        "-tsd",
+        "--test_dataset",
+        default=None,
+        type=str,
+        required=False,
+        help="Specify the testing dataset",
+    )
+
+    parser.add_argument(
+        "-irc",
+        "--random_crop",
+        default=False,
+        type=str,
+        required=False,
+        help="Specify if random crop is to be applied to the egocentric observations",
+    )
+
+    parser.add_argument(
+        "-icj",
+        "--color_jitter",
+        default=False,
+        type=str,
+        required=False,
+        help="Specify if random crop is to be applied to the egocentric observations",
+    )
+
+    parser.add_argument(
+        "-tsg",
+        "--test_gpus",
+        default=None,
+        # type=int,
+        type=str,
+        required=False,
+        help="Specify the GPUs to run test on",
+    )
 
     parser.add_argument(
         "-l",
@@ -240,6 +318,25 @@ def load_config(args) -> Tuple[ExperimentConfig, Dict[str, str]]:
 def main():
     args = get_args()
 
+    if args.visual_corruption is not None and args.visual_severity > 0:  # This works
+        VISUAL_CORRUPTION = [args.visual_corruption.replace("_", " ")]
+        VISUAL_SEVERITY = [args.visual_severity]
+    else:
+        VISUAL_CORRUPTION = args.visual_corruption
+        VISUAL_SEVERITY = args.visual_severity
+
+    TRAINING_DATASET_DIR = args.training_dataset
+    VALIDATION_DATASET_DIR = args.validation_dataset
+    TEST_DATASET_DIR = args.test_dataset
+
+    RANDOM_CROP = args.random_crop
+    COLOR_JITTER = args.color_jitter
+
+    TESTING_GPUS = None
+    if args.test_gpus is not None:
+        TESTING_GPUS = [int(x) for x in args.test_gpus.split(",")]
+        # TESTING_GPUS = [args.test_gpus]
+
     init_logging(args.log_level)
 
     get_logger().info("Running with args {}".format(args))
@@ -247,6 +344,14 @@ def main():
     ptitle("Master: {}".format("Training" if args.test_date is None else "Testing"))
 
     cfg, srcs = load_config(args)
+
+    cfg.monkey_patch_sensor(
+        VISUAL_CORRUPTION, VISUAL_SEVERITY, RANDOM_CROP, COLOR_JITTER
+    )
+
+    cfg.monkey_patch_datasets(
+        TRAINING_DATASET_DIR, VALIDATION_DATASET_DIR, TEST_DATASET_DIR
+    )
 
     if args.test_date is None:
         OnPolicyRunner(

@@ -126,7 +126,11 @@ class ResnetPreProcessorHabitat(Preprocessor):
         return self
 
     def process(self, obs: Dict[str, Any], *args: Any, **kwargs: Any) -> Any:
-        x = obs[self.input_uuids[0]].to(self.device).permute(0, 3, 1, 2)  # bhwc -> bchw
+        x = obs[self.input_uuids[0]].to(self.device)
+        if len(x.shape) == 3:  # To handle depth images
+            x = x.unsqueeze(3)
+        x = x.permute(0, 3, 1, 2)  # bhwc -> bchw
+        # x = obs[self.input_uuids[0]].to(self.device).permute(0, 3, 1, 2)  # bhwc -> bchw
         # If the input is depth, repeat it across all 3 channels
         if x.shape[1] == 1:
             x = x.repeat(1, 3, 1, 1)

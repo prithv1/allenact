@@ -253,7 +253,18 @@ class LoggingPackage(object):
 
         self.metric_dicts.append(single_task_metrics_dict)
         self.metrics_tracker.add_scalars(
-            {k: v for k, v in single_task_metrics_dict.items() if k != "task_info"}
+            {
+                k: v
+                for k, v in single_task_metrics_dict.items()
+                if k != "task_info"
+                # and k != "ep_rewards"
+                # and k != "taken_actions"
+                # and k != "action_success"
+                # and k != "shaped_rewards"
+                # and k != "took_end_action"
+                # and k != "goal_in_range"
+                # and k != "far_from_goal"
+            }
         )
         return True
 
