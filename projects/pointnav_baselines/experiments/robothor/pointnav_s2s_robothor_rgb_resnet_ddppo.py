@@ -51,20 +51,24 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     def __init__(self):
         super().__init__()
 
-        self.CAMERA_WIDTH = 640
-        self.CAMERA_HEIGHT = 480
-        self.SCREEN_SIZE = 224
+        # Task Parameters
         self.MAX_STEPS = 300  # Usually set to 500
-        self.STEP_SIZE = 0.25
-        self.ROTATION_DEGREES = 30.0
-        self.VISIBILITY_DISTANCE = 1.0
-        self.STOCHASTIC = True
         self.REWARD_CONFIG = {
             "step_penalty": -0.01,
             "goal_success_reward": 10.0,
             "failed_stop_reward": 0.0,
             "shaping_weight": 1.0,
         }
+
+        # Simulator Parameters
+        self.CAMERA_WIDTH = 640
+        self.CAMERA_HEIGHT = 480
+        self.SCREEN_SIZE = 224
+
+        self.STEP_SIZE = 0.25
+        self.ROTATION_DEGREES = 30.0
+        self.VISIBILITY_DISTANCE = 1.0
+        self.STOCHASTIC = True
 
         self.TARGET_TYPES = sorted(
             [
@@ -82,6 +86,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 "Vase",
             ]
         )
+
         self.ENV_ARGS = dict(
             width=self.CAMERA_WIDTH,
             height=self.CAMERA_HEIGHT,
@@ -156,11 +161,11 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # @classmethod
     def training_pipeline(self, **kwargs):
-        ppo_steps = int(300000000)
+        ppo_steps = int(250000000)
         lr = 3e-4
         num_mini_batch = 1
-        update_repeats = 4
-        num_steps = 128
+        update_repeats = 3
+        num_steps = 30
         save_interval = 5000000
         log_interval = 10000
         gamma = 0.99
