@@ -1,7 +1,7 @@
 # PointNav Baselines
 
 # PointNav RGB Models
-sudo python main.py \
+python main.py \
     -o storage/robothor-pointnav-rgb-resnetgru-dppo \
     -b projects/pointnav_baselines/experiments/robothor pointnav_s2s_robothor_rgb_resnet_ddppo \
     -et v1_new_pointnav_rgb_clean \

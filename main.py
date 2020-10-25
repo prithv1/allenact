@@ -332,9 +332,9 @@ def main():
     RANDOM_CROP = args.random_crop
     COLOR_JITTER = args.color_jitter
 
-    TESTING_GPUS = None
+    TEST_GPU_IDS = None
     if args.test_gpus is not None:
-        TESTING_GPUS = [int(x) for x in args.test_gpus.split(",")]
+        TEST_GPU_IDS = [int(x) for x in args.test_gpus.split(",")]
         # TESTING_GPUS = [args.test_gpus]
 
     init_logging(args.log_level)
@@ -344,6 +344,9 @@ def main():
     ptitle("Master: {}".format("Training" if args.test_date is None else "Testing"))
 
     cfg, srcs = load_config(args)
+
+    if TEST_GPU_IDS is not None:
+        cfg.TEST_GPU_IDS = TEST_GPU_IDS
 
     cfg.monkey_patch_sensor(
         VISUAL_CORRUPTION, VISUAL_SEVERITY, RANDOM_CROP, COLOR_JITTER
