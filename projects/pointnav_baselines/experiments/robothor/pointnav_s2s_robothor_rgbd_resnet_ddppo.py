@@ -102,6 +102,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             snapToGrid=False,
             agentMode="bot",
             include_private_scenes=False,
+            renderDepthImage=True,
         )
 
         self.NUM_PROCESSES = 60
