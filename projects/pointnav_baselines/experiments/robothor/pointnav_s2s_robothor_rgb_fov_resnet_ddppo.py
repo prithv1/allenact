@@ -99,7 +99,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             snapToGrid=False,
             agentMode="bot",
             include_private_scenes=False,
-            fieldOfView=45,  # Reduced field of view 90 -> 45
+            fov=42.5,  # Reduced field of view 90 -> 42.5
         )
 
         self.NUM_PROCESSES = 60

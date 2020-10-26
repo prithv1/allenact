@@ -40,17 +40,46 @@ class RoboThorEnvironment:
         self._camera_crack = f(kwargs, "camera_crack", False)
         print("Camera-Crack ", self._camera_crack)
 
-        self.config = dict(
-            rotateStepDegrees=30.0,
-            visibilityDistance=1.0,
-            gridSize=0.25,
-            agentType="stochastic",
-            continuousMode=True,
-            snapToGrid=False,
-            agentMode="bot",
-            width=640,
-            height=480,
-        )
+        self._fov = f(kwargs, "fov", None)
+        print("Field of View is ", self._fov)
+
+        if self._fov is not None:
+            self.config = dict(
+                rotateStepDegrees=30.0,
+                visibilityDistance=1.0,
+                gridSize=0.25,
+                agentType="stochastic",
+                continuousMode=True,
+                snapToGrid=False,
+                agentMode="bot",
+                width=640,
+                height=480,
+                fieldOfView=self._fov,
+            )
+        else:
+            self.config = dict(
+                rotateStepDegrees=30.0,
+                visibilityDistance=1.0,
+                gridSize=0.25,
+                agentType="stochastic",
+                continuousMode=True,
+                snapToGrid=False,
+                agentMode="bot",
+                width=640,
+                height=480,
+            )
+
+        # self.config = dict(
+        #     rotateStepDegrees=30.0,
+        #     visibilityDistance=1.0,
+        #     gridSize=0.25,
+        #     agentType="stochastic",
+        #     continuousMode=True,
+        #     snapToGrid=False,
+        #     agentMode="bot",
+        #     width=640,
+        #     height=480,
+        # )
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(
             **self.config, server_class=ai2thor.fifo_server.FifoServer
