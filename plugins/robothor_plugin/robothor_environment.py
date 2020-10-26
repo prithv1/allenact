@@ -34,6 +34,12 @@ class RoboThorEnvironment:
     """
 
     def __init__(self, **kwargs):
+        def f(x, k, default):
+            return x[k] if k in x else default
+
+        self._camera_crack = f(kwargs, "camera_crack", False)
+        print("Camera-Crack ", self._camera_crack)
+
         self.config = dict(
             rotateStepDegrees=30.0,
             visibilityDistance=1.0,
@@ -195,6 +201,11 @@ class RoboThorEnvironment:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
             self.controller.reset(scene_name)
+            if self._camera_crack:  # Add camera-crack if specified
+                # Get environment crack seed
+                scene_split = scene_name.split("_")[-2][-1] + scene_name.split("_")[-1]
+                crack_seed = int(scene_split)
+                self.controller.step(action="CameraCrack", randomSeed=crack_seed)
             assert self.last_action_success, "Could not reset to new scene"
             if scene_name not in self.known_good_locations:
                 self.known_good_locations[scene_name] = copy.deepcopy(
