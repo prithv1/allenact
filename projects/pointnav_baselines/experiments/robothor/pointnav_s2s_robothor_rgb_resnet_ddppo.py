@@ -161,7 +161,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
 
     # @classmethod
     def training_pipeline(self, **kwargs):
-        ppo_steps = int(300000000)  # int(75000000)
+        ppo_steps = int(75000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 4
