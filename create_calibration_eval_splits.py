@@ -105,20 +105,35 @@ def create_calib_eval_splits(
 if __name__ == "__main__":
 
     # PointNav
-    print("PointNav Splits..")
+    # print("PointNav Splits..")
+    # DIFF_LEVELS = 3
+    # NUM_VAL_SCENES = 15
+    # SPLIT_RATIO = 0.4
+    # DATASPLIT_PATH = "datasets/robothor-pointnav/val/"
+    # EPISODES_PATH = DATASPLIT_PATH + "episodes/"
+    # CALIB_SAVE_PATH = (
+    #     "datasets/robothor-pointnav/calib_val_" + str(SPLIT_RATIO) + "_per_sc/"
+    # )
+    # EVAL_SAVE_PATH = (
+    #     "datasets/robothor-pointnav/eval_val_" + str(SPLIT_RATIO) + "_per_sc/"
+    # )
+    # create_calib_eval_splits(
+    #     EPISODES_PATH, CALIB_SAVE_PATH, EVAL_SAVE_PATH, SPLIT_RATIO
+    # )
+
+    # ObjectNav
+    print("ObjectNav Splits..")
     DIFF_LEVELS = 3
     NUM_VAL_SCENES = 15
     SPLIT_RATIO = 0.4
-    DATASPLIT_PATH = "datasets/robothor-pointnav/val/"
+    DATASPLIT_PATH = "datasets/robothor-objectnav/val/"
     EPISODES_PATH = DATASPLIT_PATH + "episodes/"
     CALIB_SAVE_PATH = (
-        "datasets/robothor-pointnav/calib_val_" + str(SPLIT_RATIO) + "_per_sc/"
+        "datasets/robothor-objectnav/calib_val_" + str(SPLIT_RATIO) + "_per_sc/"
     )
     EVAL_SAVE_PATH = (
-        "datasets/robothor-pointnav/eval_val_" + str(SPLIT_RATIO) + "_per_sc/"
+        "datasets/robothor-objectnav/eval_val_" + str(SPLIT_RATIO) + "_per_sc/"
     )
     create_calib_eval_splits(
         EPISODES_PATH, CALIB_SAVE_PATH, EVAL_SAVE_PATH, SPLIT_RATIO
     )
-
-    # ObjectNav
