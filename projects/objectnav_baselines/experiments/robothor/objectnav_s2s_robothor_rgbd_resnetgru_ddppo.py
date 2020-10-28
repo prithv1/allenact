@@ -100,7 +100,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             renderDepthImage=True,
         )
 
-        self.NUM_PROCESSES = 80
+        self.NUM_PROCESSES = 60
         self.TRAIN_GPU_IDS = list(range(min(torch.cuda.device_count() - 1, 8)))
         self.SAMPLER_GPU_IDS = self.TRAIN_GPU_IDS
         self.VALID_GPU_IDS = (
