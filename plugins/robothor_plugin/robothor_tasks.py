@@ -501,8 +501,8 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             "soft_spl": soft_spl,
             "soft_progress": soft_progress,
         }
-        if spl >= 0:
-            metrics["spl"] = spl
+        # if spl >= 0:
+        #     metrics["spl"] = spl
         return metrics
 
     def query_expert(self, end_action_only: bool = False, **kwargs) -> Tuple[int, bool]:

@@ -93,10 +93,11 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             snapToGrid=False,
             agentMode="bot",
             include_private_scenes=False,
+            renderDepthImage=True,
         )
 
         self.NUM_PROCESSES = 80
-        self.TRAIN_GPU_IDS = list(range(min(torch.cuda.device_count(), 8)))
+        self.TRAIN_GPU_IDS = list(range(min(torch.cuda.device_count() - 1, 8)))
         self.SAMPLER_GPU_IDS = self.TRAIN_GPU_IDS
         self.VALID_GPU_IDS = (
             [torch.cuda.device_count() - 1] if torch.cuda.is_available() else []
@@ -142,16 +143,32 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                     "parallel": False,
                 },
             ),
+            Builder(
+                ResnetPreProcessorHabitat,
+                {
+                    "input_height": self.SCREEN_SIZE,
+                    "input_width": self.SCREEN_SIZE,
+                    "output_width": 7,
+                    "output_height": 7,
+                    "output_dims": 512,
+                    "pool": False,
+                    "torchvision_resnet_model": models.resnet18,
+                    "input_uuids": ["depth_lowres"],
+                    "output_uuid": "depth_resnet",
+                    "parallel": False,
+                },
+            ),
         ]
 
         self.OBSERVATIONS = [
             "rgb_resnet",
+            "depth_resnet",
             "goal_object_type_ind",
         ]
 
     @classmethod
     def tag(cls):
-        return "Objectnav-S2S-RoboTHOR-RGB-ResNetGRU-DDPPO"
+        return "Objectnav-S2S-RoboTHOR-RGBD-ResNetGRU-DDPPO"
 
     # @classmethod
     def training_pipeline(self, **kwargs):
@@ -203,6 +220,12 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 crop_width=self.CROP_WIDTH,
                 color_jitter=color_jitter,
             ),
+            DepthSensorThor(
+                height=self.SCREEN_SIZE,
+                width=self.SCREEN_SIZE,
+                use_normalization=True,
+                uuid="depth_lowres",
+            ),
             GoalObjectTypeThorSensor(object_types=self.TARGET_TYPES,),
         ]
         self.CORRUPTIONS = corruptions
@@ -239,6 +262,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             observation_space=kwargs["observation_set"].observation_spaces,
             goal_sensor_uuid="goal_object_type_ind",
             rgb_resnet_preprocessor_uuid="rgb_resnet",
+            depth_resnet_preprocessor_uuid="depth_resnet",
             hidden_size=512,
             goal_dims=32,
         )
