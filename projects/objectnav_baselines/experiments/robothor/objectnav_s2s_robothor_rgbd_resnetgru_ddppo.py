@@ -26,7 +26,11 @@ from core.base_abstractions.experiment_config import ExperimentConfig
 
 from plugins.robothor_plugin.robothor_task_samplers import ObjectNavDatasetTaskSampler
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
+from plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    GoalObjectTypeThorSensor,
+    DepthSensorThor,
+)
 from plugins.habitat_plugin.habitat_preprocessors import ResnetPreProcessorHabitat
 from plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 
