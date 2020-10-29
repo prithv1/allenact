@@ -43,6 +43,11 @@ class RoboThorEnvironment:
         self._fov = f(kwargs, "fov", None)
         print("Field of View is ", self._fov)
 
+        self._motor_failure = f(kwargs, "motor_failure", False)
+        print("Motor Failure Mode (Left / Right) is ", self._motor_failure)
+
+        self._failed_action = None
+
         if self._fov is not None:
             self.config = dict(
                 rotateStepDegrees=30.0,
@@ -229,6 +234,9 @@ class RoboThorEnvironment:
     ) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
+            if self._motor_failure:
+                self._failed_action = random.choice(["RotateLeft", "RotateRight"])
+                print("Failed Action is ", self._failed_action)
             self.controller.reset(scene_name)
             if self._camera_crack:  # Add camera-crack if specified
                 # Get environment crack seed

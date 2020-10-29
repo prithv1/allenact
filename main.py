@@ -220,6 +220,42 @@ def get_args():
         ),
     )
 
+    parser.add_argument(
+        "-tr_step",
+        "--translation_step_size",
+        default=0.25,
+        type=float,
+        required=False,
+        help="Specifies the translation step size",
+    )
+
+    parser.add_argument(
+        "-rot_step",
+        "--rotation_step_size",
+        default=30.0,
+        type=float,
+        required=False,
+        help="Specifies the rotation step size",
+    )
+
+    parser.add_argument(
+        "-tr_std",
+        "--translation_noise_std",
+        default=0.005,
+        type=float,
+        required=False,
+        help="Specifies the translation std for actuation noise",
+    )
+
+    parser.add_argument(
+        "-rot_std",
+        "--rotation_noise_std",
+        default=0.5,
+        type=float,
+        required=False,
+        help="Specifies the rotation std for actuation noise",
+    )
+
     return parser.parse_args()
 
 
@@ -332,6 +368,11 @@ def main():
     RANDOM_CROP = args.random_crop
     COLOR_JITTER = args.color_jitter
 
+    TR_STEP = args.translation_step_size
+    ROT_STEP = args.rotation_step_size
+    TR_STD = args.translation_noise_std
+    ROT_STD = args.rotation_noise_std
+
     TEST_GPU_IDS = None
     if args.test_gpus is not None:
         TEST_GPU_IDS = [int(x) for x in args.test_gpus.split(",")]
@@ -354,6 +395,10 @@ def main():
 
     cfg.monkey_patch_datasets(
         TRAINING_DATASET_DIR, VALIDATION_DATASET_DIR, TEST_DATASET_DIR
+    )
+
+    cfg.monkey_patch_env_args(
+        TR_STEP, ROT_STEP, TR_STD, ROT_STD,
     )
 
     if args.test_date is None:
