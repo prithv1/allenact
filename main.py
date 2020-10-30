@@ -256,6 +256,15 @@ def get_args():
         help="Specifies the rotation std for actuation noise",
     )
 
+    parser.add_argument(
+        "-dcr_mode",
+        "--dynamics_corruption_mode",
+        default=0,
+        type=int,
+        required=False,
+        help="Whether dynamics corruptions are to be applied or not",
+    )
+
     return parser.parse_args()
 
 
@@ -397,9 +406,10 @@ def main():
         TRAINING_DATASET_DIR, VALIDATION_DATASET_DIR, TEST_DATASET_DIR
     )
 
-    cfg.monkey_patch_env_args(
-        TR_STEP, ROT_STEP, TR_STD, ROT_STD,
-    )
+    if args.dynamics_corruption_mode == 1:
+        cfg.monkey_patch_env_args(
+            TR_STEP, ROT_STEP, TR_STD, ROT_STD,
+        )
 
     if args.test_date is None:
         OnPolicyRunner(

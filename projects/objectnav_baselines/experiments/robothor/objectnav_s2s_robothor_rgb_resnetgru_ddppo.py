@@ -96,7 +96,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         )
 
         self.NUM_PROCESSES = 60
-        self.TRAIN_GPU_IDS = list(range(min(torch.cuda.device_count(), 8)))
+        self.TRAIN_GPU_IDS = list(range(min(torch.cuda.device_count() - 1, 8)))
         self.SAMPLER_GPU_IDS = self.TRAIN_GPU_IDS
         self.VALID_GPU_IDS = (
             [torch.cuda.device_count() - 1] if torch.cuda.is_available() else []
@@ -400,7 +400,7 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
             if devices is not None and len(devices) > 0
             else None
         )
-        res["allow_flipping"] = True
+        res["allow_flipping"] = False  # Usually set to True
         return res
 
     def valid_task_sampler_args(
