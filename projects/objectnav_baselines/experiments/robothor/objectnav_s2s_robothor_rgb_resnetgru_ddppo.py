@@ -50,8 +50,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
     def __init__(self):
         super().__init__()
 
-        self.CAMERA_WIDTH = 400  # 640
-        self.CAMERA_HEIGHT = 300  # 480
+        self.CAMERA_WIDTH = 640
+        self.CAMERA_HEIGHT = 480
         self.SCREEN_SIZE = 224
         self.MAX_STEPS = 300  # 500
         self.STEP_SIZE = 0.25
