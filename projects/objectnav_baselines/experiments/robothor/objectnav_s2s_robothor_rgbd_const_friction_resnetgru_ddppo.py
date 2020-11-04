@@ -265,6 +265,8 @@ class ObjectNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         rotation_step_size=None,
         translation_noise_std=None,
         rotation_noise_std=None,
+        const_translate=None,
+        const_rotate=None,
     ):
         if translation_step_size is not None:
             self.STEP_SIZE = translation_step_size
