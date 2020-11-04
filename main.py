@@ -405,7 +405,7 @@ def main():
         CONST_TRANSLATE = True
 
     CONST_ROTATE = False
-    if args.const_rotate == 1:
+    if args.const_rotation == 1:
         CONST_ROTATE = True
 
     TEST_GPU_IDS = None
