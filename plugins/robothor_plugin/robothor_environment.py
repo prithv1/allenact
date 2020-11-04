@@ -19,6 +19,8 @@ from utils.cache_utils import (
 from utils.experiment_utils import recursive_update
 from utils.system import get_logger
 
+from pprint import pprint
+
 
 class RoboThorEnvironment:
     """Wrapper for the robo2thor controller providing additional functionality
@@ -113,6 +115,9 @@ class RoboThorEnvironment:
             )
             r_deviation = random.choice(rotate_devs)
             self.config["rotateStepDegrees"] = 30.0 + r_deviation
+
+        if self._const_translate or self._const_rotate:
+            pprint(self.config)
 
         self.controller = Controller(
             **self.config, server_class=ai2thor.fifo_server.FifoServer
