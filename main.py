@@ -259,7 +259,7 @@ def get_args():
     parser.add_argument(
         "-con_tr",
         "--const_translate",
-        default=1,
+        default=0,
         type=int,
         required=False,
         help="Specifies the constant translation friction (uniform) mode",
@@ -268,7 +268,7 @@ def get_args():
     parser.add_argument(
         "-con_rot",
         "--const_rotation",
-        default=1,
+        default=0,
         type=int,
         required=False,
         help="Specifies the constant rotation friction (uniform) mode",
