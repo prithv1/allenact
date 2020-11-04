@@ -91,6 +91,25 @@ class RoboThorEnvironment:
         #     width=640,
         #     height=480,
         # )
+
+        if self._const_translate:
+            translate_devs = (
+                np.linspace(
+                    -0.1, -0.05, 3, endpoint=True
+                ).tolist()  # Pre-defined translation variations
+                + np.linspace(0.05, 0.1, 3, endpoint=True).tolist()
+            )
+            t_deviation = random.choice(translate_devs)
+            self.config["gridSize"] = 0.25 + t_deviation
+        if self._const_rotate:
+            rotate_devs = (
+                np.linspace(
+                    -10.0, -5.0, 3, endpoint=True
+                ).tolist()  # Pre-defined rotation variation
+                + np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
+            )
+            r_deviation = random.choice(translate_devs)
+            self.config["rotateStepDegrees"] = 30.0 + r_deviation
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(
             **self.config, server_class=ai2thor.fifo_server.FifoServer
@@ -240,34 +259,34 @@ class RoboThorEnvironment:
     ) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
-            if self._const_translate or self._const_rotate:
-                scene_data = {"scene": scene_name}
-            if self._const_translate:
-                translate_devs = (
-                    np.linspace(
-                        -0.1, -0.05, 3, endpoint=True
-                    ).tolist()  # Pre-defined translation variations
-                    + np.linspace(0.05, 0.1, 3, endpoint=True).tolist()
-                )
-                t_deviation = random.choice(translate_devs)
-                scene_data["gridSize"] = 0.25 + t_deviation
-            if self._const_rotate:
-                rotate_devs = (
-                    np.linspace(
-                        -10.0, -5.0, 3, endpoint=True
-                    ).tolist()  # Pre-defined rotation variation
-                    + np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
-                )
-                r_deviation = random.choice(translate_devs)
-                scene_data["rotateStepDegrees"] = 30.0 + r_deviation
+            # if self._const_translate or self._const_rotate:
+            #     scene_data = {"scene": scene_name}
+            # if self._const_translate:
+            #     translate_devs = (
+            #         np.linspace(
+            #             -0.1, -0.05, 3, endpoint=True
+            #         ).tolist()  # Pre-defined translation variations
+            #         + np.linspace(0.05, 0.1, 3, endpoint=True).tolist()
+            #     )
+            #     t_deviation = random.choice(translate_devs)
+            #     scene_data["gridSize"] = 0.25 + t_deviation
+            # if self._const_rotate:
+            #     rotate_devs = (
+            #         np.linspace(
+            #             -10.0, -5.0, 3, endpoint=True
+            #         ).tolist()  # Pre-defined rotation variation
+            #         + np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
+            #     )
+            #     r_deviation = random.choice(translate_devs)
+            #     scene_data["rotateStepDegrees"] = 30.0 + r_deviation
             if self._motor_failure:
                 self._failed_action = random.choice(["RotateLeft", "RotateRight"])
                 print("Failed Action is ", self._failed_action)
-            if self._const_translate or self._const_rotate:
-                self.controller.reset(**scene_data)
-            else:
-                self.controller.reset(scene_name)
-            # self.controller.reset(scene_name)
+            # if self._const_translate or self._const_rotate:
+            #     self.controller.reset(**scene_data)
+            # else:
+            #     self.controller.reset(scene_name)
+            self.controller.reset(scene_name)
             if self._camera_crack:  # Add camera-crack if specified
                 # Get environment crack seed
                 scene_split = scene_name.split("_")[-2][-1] + scene_name.split("_")[-1]
