@@ -92,27 +92,28 @@ class RoboThorEnvironment:
         #     height=480,
         # )
 
+        recursive_update(self.config, {**kwargs, "agentMode": "bot"})
+
+        # Pre-defined scene-level slippage or friction
         if self._const_translate:
             translate_devs = (
-                # np.linspace(
-                #     -0.1, -0.05, 3, endpoint=True
-                # ).tolist()  # Pre-defined translation variations
-                # +
-                np.linspace(0.05, 0.1, 3, endpoint=True).tolist()
+                np.linspace(
+                    -0.1, -0.05, 3, endpoint=True
+                ).tolist()  # Pre-defined translation variations
+                + np.linspace(0.05, 0.1, 3, endpoint=True).tolist()
             )
             t_deviation = random.choice(translate_devs)
             self.config["gridSize"] = 0.25 + t_deviation
         if self._const_rotate:
             rotate_devs = (
-                # np.linspace(
-                #     -10.0, -5.0, 3, endpoint=True
-                # ).tolist()  # Pre-defined rotation variation
-                # +
-                np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
+                np.linspace(
+                    -10.0, -5.0, 3, endpoint=True
+                ).tolist()  # Pre-defined rotation variation
+                + np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
             )
             r_deviation = random.choice(rotate_devs)
             self.config["rotateStepDegrees"] = 30.0 + r_deviation
-        recursive_update(self.config, {**kwargs, "agentMode": "bot"})
+
         self.controller = Controller(
             **self.config, server_class=ai2thor.fifo_server.FifoServer
         )
