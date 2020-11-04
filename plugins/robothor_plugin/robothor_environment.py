@@ -94,19 +94,21 @@ class RoboThorEnvironment:
 
         if self._const_translate:
             translate_devs = (
-                np.linspace(
-                    -0.1, -0.05, 3, endpoint=True
-                ).tolist()  # Pre-defined translation variations
-                + np.linspace(0.05, 0.1, 3, endpoint=True).tolist()
+                # np.linspace(
+                #     -0.1, -0.05, 3, endpoint=True
+                # ).tolist()  # Pre-defined translation variations
+                # +
+                np.linspace(0.05, 0.1, 3, endpoint=True).tolist()
             )
             t_deviation = random.choice(translate_devs)
             self.config["gridSize"] = 0.25 + t_deviation
         if self._const_rotate:
             rotate_devs = (
-                np.linspace(
-                    -10.0, -5.0, 3, endpoint=True
-                ).tolist()  # Pre-defined rotation variation
-                + np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
+                # np.linspace(
+                #     -10.0, -5.0, 3, endpoint=True
+                # ).tolist()  # Pre-defined rotation variation
+                # +
+                np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
             )
             r_deviation = random.choice(rotate_devs)
             self.config["rotateStepDegrees"] = 30.0 + r_deviation
