@@ -257,6 +257,24 @@ def get_args():
     )
 
     parser.add_argument(
+        "-con_tr",
+        "--const_translate",
+        default=1,
+        type=int,
+        required=False,
+        help="Specifies the constant translation friction (uniform) mode",
+    )
+
+    parser.add_argument(
+        "-con_rot",
+        "--const_rotation",
+        default=1,
+        type=int,
+        required=False,
+        help="Specifies the constant rotation friction (uniform) mode",
+    )
+
+    parser.add_argument(
         "-dcr_mode",
         "--dynamics_corruption_mode",
         default=0,
@@ -382,6 +400,14 @@ def main():
     TR_STD = args.translation_noise_std
     ROT_STD = args.rotation_noise_std
 
+    CONST_TRANSLATE = False
+    if args.const_translate == 1:
+        CONST_TRANSLATE = True
+
+    CONST_ROTATE = False
+    if args.const_rotate == 1:
+        CONST_ROTATE = True
+
     TEST_GPU_IDS = None
     if args.test_gpus is not None:
         TEST_GPU_IDS = [int(x) for x in args.test_gpus.split(",")]
@@ -408,7 +434,7 @@ def main():
 
     if args.dynamics_corruption_mode == 1:
         cfg.monkey_patch_env_args(
-            TR_STEP, ROT_STEP, TR_STD, ROT_STD,
+            TR_STEP, ROT_STEP, TR_STD, ROT_STD, CONST_TRANSLATE, CONST_ROTATE,
         )
 
     if args.test_date is None:

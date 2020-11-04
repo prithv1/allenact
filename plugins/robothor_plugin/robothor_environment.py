@@ -46,6 +46,12 @@ class RoboThorEnvironment:
         self._motor_failure = f(kwargs, "motor_failure", False)
         print("Motor Failure Mode (Left / Right) is ", self._motor_failure)
 
+        self._const_translate = f(kwargs, "constTranslate", False)
+        print("Constant (but Uniform) translate friction", self._const_translate)
+
+        self._const_rotate = f(kwargs, "constRotate", False)
+        print("Constant (but Uniform) Rotate friction", self._const_rotate)
+
         self._failed_action = None
 
         if self._fov is not None:
@@ -234,10 +240,34 @@ class RoboThorEnvironment:
     ) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
+            if self._const_translate or self._const_rotate:
+                scene_data = {"scene": scene_name}
+            if self._const_translate:
+                translate_devs = (
+                    np.linspace(
+                        -0.1, -0.05, 3, endpoint=True
+                    ).tolist()  # Pre-defined translation variations
+                    + np.linspace(0.05, 0.1, 3, endpoint=True).tolist()
+                )
+                t_deviation = random.choice(translate_devs)
+                scene_data["gridSize"] = 0.25 + t_deviation
+            if self._const_rotate:
+                rotate_devs = (
+                    np.linspace(
+                        -10.0, -5.0, 3, endpoint=True
+                    ).tolist()  # Pre-defined rotation variation
+                    + np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
+                )
+                r_deviation = random.choice(translate_devs)
+                scene_data["rotateStepDegrees"] = 30.0 + r_deviation
             if self._motor_failure:
                 self._failed_action = random.choice(["RotateLeft", "RotateRight"])
                 print("Failed Action is ", self._failed_action)
-            self.controller.reset(scene_name)
+            if self._const_translate or self._const_rotate:
+                self.controller.reset(**scene_data)
+            else:
+                self.controller.reset(scene_name)
+            # self.controller.reset(scene_name)
             if self._camera_crack:  # Add camera-crack if specified
                 # Get environment crack seed
                 scene_split = scene_name.split("_")[-2][-1] + scene_name.split("_")[-1]
