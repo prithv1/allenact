@@ -108,7 +108,7 @@ class RoboThorEnvironment:
                 ).tolist()  # Pre-defined rotation variation
                 + np.linspace(5.0, 10.0, 3, endpoint=True).tolist()
             )
-            r_deviation = random.choice(translate_devs)
+            r_deviation = random.choice(rotate_devs)
             self.config["rotateStepDegrees"] = 30.0 + r_deviation
         recursive_update(self.config, {**kwargs, "agentMode": "bot"})
         self.controller = Controller(
