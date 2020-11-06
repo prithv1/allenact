@@ -433,9 +433,14 @@ def main():
     )
 
     if args.dynamics_corruption_mode == 1:
-        cfg.monkey_patch_env_args(
-            TR_STEP, ROT_STEP, TR_STD, ROT_STD, CONST_TRANSLATE, CONST_ROTATE,
-        )
+        if CONST_TRANSLATE or CONST_ROTATE:
+            cfg.monkey_patch_env_args(
+                TR_STEP, ROT_STEP, TR_STD, ROT_STD, CONST_TRANSLATE, CONST_ROTATE,
+            )
+        else:
+            cfg.monkey_patch_env_args(
+                TR_STEP, ROT_STEP, TR_STD, ROT_STD,
+            )
 
     if args.test_date is None:
         OnPolicyRunner(

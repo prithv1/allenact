@@ -54,6 +54,13 @@ class RoboThorEnvironment:
         self._const_rotate = f(kwargs, "constRotate", False)
         print("Constant (but Uniform) Rotate friction", self._const_rotate)
 
+        self._drift = f(kwargs, "drift", False)
+        print("Drift Mode is True")
+
+        self._drift_dir = None
+
+        self._drift_deg = f(kwargs, "drift_deg", 1.15)
+
         self._failed_action = None
 
         if self._fov is not None:
@@ -269,6 +276,8 @@ class RoboThorEnvironment:
     ) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
+            if self._drift:
+                self._drift_dir = random.choice(["Left", "Right"])
             if self._motor_failure:
                 self._failed_action = random.choice(["RotateLeft", "RotateRight"])
                 print("Failed Action is ", self._failed_action)

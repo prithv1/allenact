@@ -100,6 +100,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self.task_info["motor_failure"] = True
             self.task_info["failed_action"] = self.env._failed_action
 
+        if self.env._drift:
+            self.task_info["drift_dir"] = self.env._drift_dir
+            self.task_info["drift_deg"] = self.env._drift_deg
+
         if action_str == END:
             self._took_end_action = True
             self.task_info["took_end_action"] = self._took_end_action
@@ -111,6 +115,28 @@ class PointNavTask(Task[RoboThorEnvironment]):
             if self.env._motor_failure:
                 if action_str == self.env._failed_action:
                     action_str = "Pass"
+
+            if self.env._drift:
+                if action_str == "MOVE_AHEAD":
+                    curr_pos = self.env.last_event.metadata["agent"]["position"]
+                    curr_rot = self.env.last_event.metadata["agent"]["rotation"]
+                    drift_deg = self.env._drift_deg
+                    if self.env._drift_dir == "Right":
+                        drift_deg = self.env._drift_deg + curr_rot["y"]
+                    else:
+                        drift_deg = self.env._drift_deg - curr_rot["y"]
+                    self.env.step(
+                        action="TeleportFull",
+                        x=curr_pos["x"],
+                        y=curr_pos["y"],
+                        z=curr_pos["z"],
+                        rotation={
+                            "x": curr_rot["x"],
+                            "y": drift_deg,
+                            "z": curr_rot["z"],
+                        },
+                    )
+
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
             self.task_info["action_success"].append(self.last_action_success)
@@ -340,6 +366,10 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.task_info["motor_failure"] = True
             self.task_info["failed_action"] = self.env._failed_action
 
+        if self.env._drift:
+            self.task_info["drift_dir"] = self.env._drift_dir
+            self.task_info["drift_deg"] = self.env._drift_deg
+
         if action_str == END:
             self._took_end_action = True
             self.task_info["took_end_action"] = self._took_end_action
@@ -351,6 +381,28 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             if self.env._motor_failure:
                 if action_str == self.env._failed_action:
                     action_str = "Pass"
+
+            if self.env._drift:
+                if action_str == "MOVE_AHEAD":
+                    curr_pos = self.env.last_event.metadata["agent"]["position"]
+                    curr_rot = self.env.last_event.metadata["agent"]["rotation"]
+                    drift_deg = self.env._drift_deg
+                    if self.env._drift_dir == "Right":
+                        drift_deg = self.env._drift_deg + curr_rot["y"]
+                    else:
+                        drift_deg = self.env._drift_deg - curr_rot["y"]
+                    self.env.step(
+                        action="TeleportFull",
+                        x=curr_pos["x"],
+                        y=curr_pos["y"],
+                        z=curr_pos["z"],
+                        rotation={
+                            "x": curr_rot["x"],
+                            "y": drift_deg,
+                            "z": curr_rot["z"],
+                        },
+                    )
+
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
             self.task_info["action_success"].append(self.last_action_success)
