@@ -394,15 +394,17 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                     else:
                         drift_deg = self.env._drift_deg - curr_rot["y"]
                     self.env.step(
-                        action="TeleportFull",
-                        x=curr_pos["x"],
-                        y=curr_pos["y"],
-                        z=curr_pos["z"],
-                        rotation={
-                            "x": curr_rot["x"],
-                            "y": drift_deg,
-                            "z": curr_rot["z"],
-                        },
+                        {
+                            "action": "TeleportFull",
+                            "x": curr_pos["x"],
+                            "y": curr_pos["y"],
+                            "z": curr_pos["z"],
+                            "rotation": {
+                                "x": curr_rot["x"],
+                                "y": drift_deg,
+                                "z": curr_rot["z"],
+                            },
+                        }
                     )
 
             self.env.step({"action": action_str})
