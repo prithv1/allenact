@@ -385,7 +385,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
                     action_str = "Pass"
 
             if self.env._drift:
-                if action_str == "MOVE_AHEAD":
+                if action_str == "MoveAhead":
                     curr_pos = self.env.last_event.metadata["agent"]["position"]
                     curr_rot = self.env.last_event.metadata["agent"]["rotation"]
                     drift_deg = self.env._drift_deg
