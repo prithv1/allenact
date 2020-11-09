@@ -196,6 +196,20 @@ class OnPolicyRLEngine(object):
         # Keeping track of metrics during training/inference
         self.single_process_metrics_queue: queue.Queue = queue.Queue()
 
+        # Inverse Dynamics Mode
+        try:
+            self.inv_mode = self.actor_critic.inv_mode
+        except AttributeError:
+            self.inv_mode = False
+            print("Actor critic model has no attribute inverse mode")
+
+        # Separate Rotation Prediction Mode
+        try:
+            self.sep_rot_mode = self.actor_critic.sep_rot_mode
+        except AttributeError:
+            self.sep_rot_mode = False
+            print("Actor critic model has no attribute separate rotation mode")
+
     @property
     def vector_tasks(self) -> VectorSampledTasks:
         if self._vector_tasks is None and self.num_samplers > 0:
@@ -788,6 +802,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     masks=batch["masks"],
                 )
 
+                pred_action_logits = None
+                if self.inv_mode:
+                    pred_action_logits = actor_critic_output.extras[
+                        "pred_action_logits"
+                    ]
+
+                pred_rotation_logits = None
+                if self.sep_rot_mode:
+                    pred_rotation_logits = actor_critic_output.extras[
+                        "pred_rotation_logits"
+                    ]
+
                 info: Dict[str, float] = {
                     "lr": self.optimizer.param_groups[0]["lr"]  # type: ignore
                 }
@@ -803,6 +829,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         step_count=self.step_count,
                         batch=batch,
                         actor_critic_output=actor_critic_output,
+                        pred_action_logits=pred_action_logits,
+                        pred_rotation_logits=pred_rotation_logits,
                     )
                     if total_loss is None:
                         total_loss = loss_weight * current_loss

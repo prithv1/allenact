@@ -55,7 +55,7 @@ class RoboThorEnvironment:
         print("Constant (but Uniform) Rotate friction", self._const_rotate)
 
         self._drift = f(kwargs, "drift", False)
-        print("Drift Mode is True")
+        print("Drift Mode is ", self._drift)
 
         self._drift_dir = None
 

@@ -18,6 +18,7 @@ from typing import (
 
 import PIL
 import gym
+import copy
 import numpy as np
 import torch
 
@@ -226,6 +227,110 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         )
 
 
+class RotationSensor(Sensor[EnvType, SubTaskType]):
+    def __init__(self, uuid: str = "rot_label", **kwargs: Any):
+        observation_space = self._get_observation_space()
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self) -> gym.spaces.Discrete:
+        return gym.spaces.Discrete(4)
+
+    def get_observation(
+        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
+    ) -> Any:
+        return 0
+
+
+class SeparateRotatedVisionSensor(Sensor[EnvType, SubTaskType]):
+    def __init__(
+        self,
+        mean: Optional[np.ndarray] = np.array(
+            [[[0.485, 0.456, 0.406]]], dtype=np.float32
+        ),
+        stdev: Optional[np.ndarray] = np.array(
+            [[[0.229, 0.224, 0.225]]], dtype=np.float32
+        ),
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        uuid: str = "sep_rot_rgb",
+        output_shape: Optional[Tuple[int, ...]] = None,
+        output_channels: int = 3,
+        unnormalized_infimum: float = 0.0,
+        unnormalized_supremum: float = 1.0,
+        **kwargs: Any
+    ):
+        self._norm_means = mean
+        self._norm_sds = stdev
+        assert (self._norm_means is None) == (self._norm_sds is None), (
+            "In SeparateRotatedVisionSensor's config, "
+            "either both mean/stdev must be None or neither."
+        )
+        self._should_normalize = self._norm_means is not None
+
+        self._height = height
+        self._width = width
+        assert (self._width is None) == (self._height is None), (
+            "In SeparateRotatedVisionSensor's config, "
+            "either both height/width must be None or neither."
+        )
+
+        observation_space = self._get_observation_space(
+            output_shape=output_shape,
+            output_channels=output_channels,
+            unnormalized_infimum=unnormalized_infimum,
+            unnormalized_supremum=unnormalized_supremum,
+        )
+
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(
+        self,
+        output_shape: Optional[Tuple[int, ...]],
+        output_channels: Optional[int],
+        unnormalized_infimum: float,
+        unnormalized_supremum: float,
+    ) -> gym.spaces.Box:
+        assert output_shape is None or output_channels is None, (
+            "In VisionSensor's config, "
+            "only one of output_shape and output_channels can be not None."
+        )
+
+        shape: Optional[Tuple[int, ...]] = None
+        if output_shape is not None:
+            shape = output_shape
+        elif self._height is not None and output_channels is not None:
+            shape = (
+                cast(int, self._height),
+                cast(int, self._width),
+                cast(int, output_channels),
+            )
+
+        if not self._should_normalize or shape is None or len(shape) == 1:
+            return gym.spaces.Box(
+                low=np.float32(unnormalized_infimum),
+                high=np.float32(unnormalized_supremum),
+                shape=shape,
+            )
+        else:
+            out_shape = shape[:-1] + (1,)
+            low = np.tile(
+                (unnormalized_infimum - cast(np.ndarray, self._norm_means))
+                / cast(np.ndarray, self._norm_sds),
+                out_shape,
+            )
+            high = np.tile(
+                (unnormalized_supremum - cast(np.ndarray, self._norm_means))
+                / cast(np.ndarray, self._norm_sds),
+                out_shape,
+            )
+            return gym.spaces.Box(low=np.float32(low), high=np.float32(high))
+
+    def get_observation(
+        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
+    ) -> Any:
+        return 0
+
+
 class VisionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
         self,
@@ -275,6 +380,9 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         print("Applied corruptions are ")
         print(self._corruptions)
         print(self._severities)
+
+        # Whether to rotate the observation or not
+        self._sep_rotate: bool = f(kwargs, "sep_rotate", False)
 
         self._norm_means = mean
         self._norm_sds = stdev
@@ -421,6 +529,14 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
                 im = self.to_pil(im)
             im = self._color_jitter(im)
 
+        if self._sep_rotate:
+            rot_im = copy.deepcopy(im)
+
+        if self._sep_rotate:
+            if not isinstance(rot_im, np.ndarray):
+                rot_im = np.array(im)
+            rot_im, rot_label = degradations.rotate_single(rot_im)
+
         if self._scale_first:
             if not isinstance(im, np.ndarray):
                 shape_condition = im.size[:2] != (self._height, self._width)
@@ -430,6 +546,15 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             if self.scaler is not None and shape_condition:
                 im = np.array(self.scaler(im), dtype=np.uint8)  # hwc
 
+            if self._sep_rotate:
+                if not isinstance(rot_im, np.ndarray):
+                    shape_condition = rot_im.size[:2] != (self._height, self._width)
+                else:
+                    shape_condition = rot_im.shape[:2] != (self._height, self._width)
+                    rot_im = self.to_pil(rot_im)
+                if self.scaler is not None and shape_condition:
+                    rot_im = np.array(self.scaler(rot_im), dtype=np.uint8)  # hwc
+
         # Original
         # if self._scale_first:
         #     if self.scaler is not None and im.shape[:2] != (self._height, self._width):
@@ -437,18 +562,42 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
 
         assert im.dtype in [np.uint8, np.float32]
 
+        if self._sep_rotate:
+            assert rot_im.dtype in [np.uint8, np.float32]
+
         if im.dtype == np.uint8:
             im = im.astype(np.float32) / 255.0
+
+        if self._sep_rotate:
+            if rot_im.dtype == np.uint8:
+                rot_im = rot_im.astype(np.float32) / 255.0
 
         if self._should_normalize:
             im -= self._norm_means
             im /= self._norm_sds
 
+        if self._sep_rotate:
+            if self._should_normalize:
+                rot_im -= self._norm_means
+                rot_im /= self._norm_sds
+
         if not self._scale_first:  # Fix to be covered later
             if self.scaler is not None and im.shape[:2] != (self._height, self._width):
                 im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
 
-        return im
+            if self._sep_rotate:
+                if self.scaler is not None and rot_im.shape[:2] != (
+                    self._height,
+                    self._width,
+                ):
+                    rot_im = np.array(
+                        self.scaler(self.to_pil(rot_im)), dtype=np.float32
+                    )  # hwc
+
+        if self._sep_rotate:
+            return (im, rot_im, rot_label)
+        else:
+            return im
 
 
 class RGBSensor(VisionSensor[EnvType, SubTaskType], ABC):
