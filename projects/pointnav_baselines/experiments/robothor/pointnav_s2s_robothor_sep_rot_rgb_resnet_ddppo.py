@@ -176,7 +176,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 4
-        num_steps = 128  # Trying with rollout step-size of 128 on GPUs with more memory
+        num_steps = 90  # Trying with rollout step-size of 128 on GPUs with more memory
         save_interval = 5000000
         log_interval = 10000
         gamma = 0.99
