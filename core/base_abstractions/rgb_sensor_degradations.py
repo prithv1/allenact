@@ -564,6 +564,33 @@ def elastic_transform(image, severity=1):
     )
 
 
+# Define faster numpy based data-transformations
+def random_crop(img, out_size):
+    """
+    Arguments
+    img : current frame (np.array as C, H, W)
+    out_size: cropped output size
+    returns np.array
+    """
+    h, w, c = img.shape
+    hcrop_max = h - out_size[0] + 1
+    wcrop_max = w - out_size[1] + 1
+    h1 = np.random.randint(0, hcrop_max)
+    w1 = np.random.randint(0, wcrop_max)
+    cropped = img[h1 : h1 + out_size[0], w1 : w1 + out_size[1], :]
+    return cropped
+
+
+def random_translate(img, size, return_random_idxs=False, h1s=None, w1s=None):
+    h, w, c = img.shape
+    assert size >= h and size >= w
+    out = np.zeros((size, size, c), dtype=img.dtype)
+    h1s = np.random.randint(0, size - h + 1) if h1s is None else h1s
+    w1s = np.random.randint(0, size - w + 1) if w1s is None else w1s
+    out[h1s : h1s + h, w1s : w1s + w, :] = img
+    return out
+
+
 # /////////////// End Distortions ///////////////
 
 import collections

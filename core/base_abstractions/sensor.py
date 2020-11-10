@@ -369,6 +369,10 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         self._crop_height: Optional[int] = f(kwargs, "crop_height", None)
         self._crop_width: Optional[int] = f(kwargs, "crop_width", None)
         self._jitter: Optional[bool] = f(kwargs, "color_jitter", False)
+        self._gnoise: Optional[bool] = f(kwargs, "gaussian_noise", False)
+        self._gblur: Optional[bool] = f(kwargs, "gaussian_blur", False)
+        self._tshift: Optional[bool] = f(kwargs, "random_translate", False)
+        self._daug_mode: Optional[bool] = f(kwargs, "data_augmentation_mode", False)
 
         # Parse corruption details
         # Additional inputs are
@@ -380,6 +384,12 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         print("Applied corruptions are ")
         print(self._corruptions)
         print(self._severities)
+
+        print("Random Crop state ", self._random_crop)
+        print("Color Jitter state ", self._jitter)
+        # print("Gaussian Noise state ", self._gnoise)
+        # print("Gaussian Blur state ", self._gblur)
+        print("Random Translate ", self._tshift)
 
         # Whether to rotate the observation or not
         self._sep_rotate: bool = f(kwargs, "sep_rotate", False)
@@ -416,6 +426,19 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
 
         self._color_jitter = (
             None if not self._jitter else transforms.ColorJitter(0.4, 0.4, 0.4, 0.4)
+        )
+
+        # # Operate maximally till severity = 2 equivalent of skimage gaussian blur
+        # self._gaussian_blur = (
+        #     None
+        #     if not self._gblur
+        #     else transforms.GaussianBlur((5, 5), sigma=(0.1, 2.0))
+        # )
+
+        self._random_translate = (
+            None
+            if not self._tshift
+            else transforms.RandomAffine(degrees=0, translate=(0.2, 0.2))
         )
 
         self.to_pil = transforms.ToPILImage()  # assumes mode="RGB" for 3 channels
@@ -517,6 +540,29 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
                 np.array(im), self._corruptions, self._severities
             )
 
+        # if self._daug_mode:
+        #     im = np.array(im)
+        #     if self._random_crop:
+        #         im = degradations.random_crop(im, (self._crop_height, self._crop_width))
+        #     if self._gnoise:
+        #         im = degradations.gaussian_noise(im, 2)
+        #     if self._gblur:
+        #         im = degradations.gaussian_blur(im, 2)
+        #     if self._tshift:
+        #         im = degradations.random_translate(im, 600, 600)
+
+        #     if im.dtype in [np.float32, np.float64]:
+        #         im = im.astype(np.uint8)
+
+        #     im = degradations.apply_corruption_sequence(
+        #         np.array(im), ["Gaussian Blur", "Gaussian Noise"], [2, 2],
+        #     )
+
+        if self._tshift:
+            if isinstance(im, np.ndarray):
+                im = self.to_pil(im)
+            im = self._random_translate(im)
+
         # Random Crop Image
         if self._random_crop:
             if isinstance(im, np.ndarray):
@@ -528,6 +574,11 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             if isinstance(im, np.ndarray):
                 im = self.to_pil(im)
             im = self._color_jitter(im)
+
+        # if self._gblur:
+        #     if isinstance(im, np.ndarray):
+        #         im = self.to_pil(im)
+        #     im = self._gaussian_blur(im)
 
         if self._sep_rotate:
             rot_im = copy.deepcopy(im)

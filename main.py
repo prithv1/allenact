@@ -185,7 +185,7 @@ def get_args():
         "-irc",
         "--random_crop",
         default=False,
-        type=str,
+        type=bool,
         required=False,
         help="Specify if random crop is to be applied to the egocentric observations",
     )
@@ -194,7 +194,7 @@ def get_args():
         "-icj",
         "--color_jitter",
         default=False,
-        type=str,
+        type=bool,
         required=False,
         help="Specify if random crop is to be applied to the egocentric observations",
     )
