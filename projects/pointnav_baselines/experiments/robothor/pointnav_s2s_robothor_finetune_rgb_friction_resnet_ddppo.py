@@ -105,7 +105,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
         )
 
         self.NUM_PROCESSES = 15
-        self.TRAIN_GPU_IDS = list(range(3)))
+        self.TRAIN_GPU_IDS = list(range(3))
         self.SAMPLER_GPU_IDS = self.TRAIN_GPU_IDS
         self.VALID_GPU_IDS = [3]
         self.TEST_GPU_IDS = [0]
