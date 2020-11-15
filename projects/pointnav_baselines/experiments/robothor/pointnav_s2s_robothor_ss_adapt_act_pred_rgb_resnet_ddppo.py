@@ -192,7 +192,7 @@ class PointNavRoboThorRGBPPOExperimentConfig(ExperimentConfig):
                 PipelineStage(
                     loss_names=["ppo_loss", "act_pred_loss"],
                     max_stage_steps=ppo_steps,
-                    loss_weights=[0.0, 1.0],
+                    loss_weights=[0.0, 0.01],
                 )
             ],
             lr_scheduler_builder=Builder(
