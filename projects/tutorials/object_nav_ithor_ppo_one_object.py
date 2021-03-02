@@ -3,23 +3,30 @@ from typing import Dict, Any, List, Optional
 
 import gym
 import numpy as np
-import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 
-from core.algorithms.onpolicy_sync.losses import PPO
-from core.algorithms.onpolicy_sync.losses.ppo import PPOConfig
-from core.base_abstractions.experiment_config import ExperimentConfig
-from core.base_abstractions.sensor import SensorSuite
-from core.base_abstractions.task import TaskSampler
-from plugins.ithor_plugin.ithor_sensors import RGBSensorThor, GoalObjectTypeThorSensor
-from plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
-from plugins.ithor_plugin.ithor_tasks import ObjectNavTask
+from allenact.algorithms.onpolicy_sync.losses import PPO
+from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
+from allenact.base_abstractions.experiment_config import ExperimentConfig
+from allenact.base_abstractions.sensor import SensorSuite
+from allenact.base_abstractions.task import TaskSampler
+from allenact.utils.experiment_utils import (
+    Builder,
+    PipelineStage,
+    TrainingPipeline,
+    LinearDecay,
+)
+from allenact_plugins.ithor_plugin.ithor_sensors import (
+    RGBSensorThor,
+    GoalObjectTypeThorSensor,
+)
+from allenact_plugins.ithor_plugin.ithor_task_samplers import ObjectNavTaskSampler
+from allenact_plugins.ithor_plugin.ithor_tasks import ObjectNaviThorGridTask
 from projects.objectnav_baselines.models.object_nav_models import (
     ObjectNavBaselineActorCritic,
 )
-from utils.experiment_utils import Builder, PipelineStage, TrainingPipeline, LinearDecay
 
 
 class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
@@ -118,8 +125,12 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         return ObjectNavBaselineActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
+            action_space=gym.spaces.Discrete(
+                len(ObjectNaviThorGridTask.class_action_names())
+            ),
             observation_space=SensorSuite(cls.SENSORS).observation_spaces,
+            rgb_uuid=cls.SENSORS[0].uuid,
+            depth_uuid=None,
             goal_sensor_uuid="goal_object_type_ind",
             hidden_size=512,
             object_type_embedding_dim=8,
@@ -166,7 +177,7 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
             "max_steps": self.MAX_STEPS,
             "sensors": self.SENSORS,
             "action_space": gym.spaces.Discrete(
-                len(ObjectNavTask.class_action_names())
+                len(ObjectNaviThorGridTask.class_action_names())
             ),
             "seed": seeds[process_ind] if seeds is not None else None,
             "deterministic_cudnn": deterministic_cudnn,
@@ -191,7 +202,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         return res
 
@@ -215,7 +228,9 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         return res
 
@@ -239,6 +254,8 @@ class ObjectNavThorPPOExperimentConfig(ExperimentConfig):
         res["env_args"] = {}
         res["env_args"].update(self.ENV_ARGS)
         res["env_args"]["x_display"] = (
-            ("0.%d" % devices[process_ind % len(devices)]) if len(devices) > 0 else None
+            ("0.%d" % devices[process_ind % len(devices)])
+            if devices is not None and len(devices) > 0
+            else None
         )
         return res

@@ -1,5 +1,6 @@
 """
-Create RoboTHOR PointNav Mini-val Splits
+Create RoboTHOR mini-val splits
+(for both PointNav and ObjectNav)
 - No need to modify the distance caches
 - Only subsample episodes
 - Subsample equal number of easy, medium and hard episodes
@@ -40,9 +41,10 @@ def create_minival(episode_f, split_ratio=0.4):
     med_ep = [x for x in id_diff_tuple if x[0] == "medium"]
     hard_ep = [x for x in id_diff_tuple if x[0] == "hard"]
 
-    # print(len(easy_ep))
-    # print(len(med_ep))
-    # print(len(hard_ep))
+    print("Overall distribution of episodes according to difficulty")
+    print("Easy ", len(easy_ep))
+    print("Medium ", len(med_ep))
+    print("Hard ", len(hard_ep))
 
     # Get calibration and evaluation indices
     easy_calib_ind = int(len(easy_ep) * split_ratio)
@@ -90,6 +92,7 @@ def create_calib_eval_splits(
 
     scenes = [x for x in os.listdir(EPISODES_PATH) if "json.gz" in x]
     for scene in scenes:
+        print("*" * 10)
         print("Scene is ", scene)
         scene_episodes = EPISODES_PATH + scene
         eval_episodes, calib_episodes = create_minival(scene_episodes, split_ratio)
@@ -98,8 +101,10 @@ def create_calib_eval_splits(
         write_jsongz(CALIB_SAVE_PATH + "episodes/" + scene, calib_episodes)
         write_jsongz(EVAL_SAVE_PATH + "episodes/" + scene, eval_episodes)
 
+    print("-" * 10)
     print("Total Calibration Tasks ", calib_counter)
     print("Total Evaluation Tasks ", eval_counter)
+    print("-" * 10)
 
 
 if __name__ == "__main__":

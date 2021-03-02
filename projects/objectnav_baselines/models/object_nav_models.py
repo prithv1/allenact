@@ -3,7 +3,6 @@
 Object navigation is currently available as a Task in AI2-THOR and
 Facebook's Habitat.
 """
-import typing
 from typing import Tuple, Dict, Optional, cast
 
 import gym
@@ -11,7 +10,7 @@ import torch
 import torch.nn as nn
 from gym.spaces.dict import Dict as SpaceDict
 
-from core.algorithms.onpolicy_sync.policy import (
+from allenact.algorithms.onpolicy_sync.policy import (
     ActorCriticModel,
     LinearCriticHead,
     LinearActorHead,
@@ -19,9 +18,9 @@ from core.algorithms.onpolicy_sync.policy import (
     Memory,
     ObservationType,
 )
-from core.base_abstractions.distributions import CategoricalDistr
-from core.base_abstractions.misc import ActorCriticOutput
-from core.models.basic_models import SimpleCNN, RNNStateEncoder
+from allenact.base_abstractions.distributions import CategoricalDistr
+from allenact.base_abstractions.misc import ActorCriticOutput
+from allenact.embodiedai.models.basic_models import SimpleCNN, RNNStateEncoder
 
 
 class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
@@ -45,6 +44,8 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         action_space: gym.spaces.Discrete,
         observation_space: SpaceDict,
         goal_sensor_uuid: str,
+        rgb_uuid: Optional[str],
+        depth_uuid: Optional[str],
         hidden_size=512,
         object_type_embedding_dim=8,
         trainable_masked_hidden_state: bool = False,
@@ -62,7 +63,12 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
         self._hidden_size = hidden_size
         self.object_type_embedding_size = object_type_embedding_dim
 
-        self.visual_encoder = SimpleCNN(self.observation_space, self._hidden_size)
+        self.visual_encoder = SimpleCNN(
+            observation_space=self.observation_space,
+            output_size=self._hidden_size,
+            rgb_uuid=rgb_uuid,
+            depth_uuid=depth_uuid,
+        )
 
         self.state_encoder = RNNStateEncoder(
             (0 if self.is_blind else self._hidden_size) + object_type_embedding_dim,
@@ -135,7 +141,7 @@ class ObjectNavBaselineActorCritic(ActorCriticModel[CategoricalDistr]):
 
         # Parameters
         observations : Batched input observations.
-        rnn_hidden_states : Hidden states from initial timepoints.
+        memory : `Memory` containing the hidden states from initial timepoints.
         prev_actions : Tensor of previous actions taken.
         masks : Masks applied to hidden states. See `RNNStateEncoder`.
         # Returns
@@ -334,7 +340,7 @@ class ResnetTensorGoalEncoder(nn.Module):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return typing.cast(
+        return cast(
             torch.FloatTensor,
             self.embed_class(observations[self.goal_uuid].to(torch.int64)),
         )
@@ -469,7 +475,7 @@ class ResnetDualTensorGoalEncoder(nn.Module):
         self, observations: Dict[str, torch.FloatTensor]
     ) -> torch.FloatTensor:
         """Get the object type encoding from input batched observations."""
-        return typing.cast(
+        return cast(
             torch.FloatTensor,
             self.embed_class(observations[self.goal_uuid].to(torch.int64)),
         )

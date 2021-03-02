@@ -1,5 +1,9 @@
 # AllenAct Tutorials
 
+**Note** The provided commands to execute these tutorials assume you have
+[installed the full library](../installation/installation-allenact.md#full-library)
+and the specific requirements for each used plugin.
+
 We provide several tutorials to help ramp up researchers to the field of Embodied-AI as well as to the AllenAct framework.
 
 ## [Navigation in MiniGrid](../tutorials/minigrid-tutorial.md)
@@ -44,14 +48,14 @@ This tutorial demonstrates how easy it is modify the experiment config created i
 [Follow the tutorial here.](../tutorials/transfering-to-a-different-environment-framework.md)
 
 
-## [Using a pretrained model](../tutorials/running_inference_on_a_pretrained_model.md)
+## [Using a pretrained model](../tutorials/running-inference-on-a-pretrained-model.md)
 
 ![Pretrained inference](../img/viz_pretrained_2videos.jpg)
 
 This tutorial shows how to run inference on one or more checkpoints of a pretrained model and generate
 visualizations of different types.
 
-[Follow the tutorial here.](../tutorials/running_inference_on_a_pretrained_model.md)
+[Follow the tutorial here.](../tutorials/running-inference-on-a-pretrained-model.md)
 
 
 ## [Off-policy training](../tutorials/offpolicy-tutorial.md)
@@ -59,3 +63,18 @@ visualizations of different types.
 This tutorial shows how to train an Actor using an off-policy dataset with expert actions.
 
 [Follow the tutorial here.](../tutorials/offpolicy-tutorial.md)
+
+
+## [OpenAI gym for continuous control](../tutorials/gym-tutorial.md)
+
+![gym task example](../img/lunar_lander_continuous_demo.png)
+
+We train an agent to complete the `LunarLanderContinuous-v2` task from
+[OpenAI gym](https://gym.openai.com/envs/LunarLanderContinuous-v2). 
+
+This tutorial presents:
+
+* A `gym` plugin fopr `AllenAct`. 
+* A continuous control example with multiple actors using PPO.
+
+[Follow the tutorial here.](../tutorials/gym-tutorial.md)

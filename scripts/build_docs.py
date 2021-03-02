@@ -10,6 +10,7 @@ from git import Git
 from ruamel.yaml import YAML  # type: ignore
 
 from constants import ABS_PATH_OF_TOP_LEVEL_DIR
+from scripts.literate import literate_python_to_markdown
 
 
 class StringColors:
@@ -32,7 +33,6 @@ exclude_files = [
     "run.py",
     "setup.py",
     "main.py",
-    "main.py",
 ]
 
 
@@ -46,6 +46,19 @@ def render_file(
     classes and functions in the file. More information here:
     https://pypi.org/project/pydoc-markdown/
     """
+    # First try literate
+    was_literate = False
+    try:
+        was_literate = literate_python_to_markdown(
+            path=os.path.join(relative_src_path, src_file)
+        )
+    except Exception as _:
+        pass
+
+    if was_literate:
+        return
+
+    # Now do standard pydocmd
     relative_src_namespace = relative_src_path.replace("/", ".")
     src_base = src_file.replace(".py", "")
 
@@ -285,7 +298,15 @@ def main():
     git_dirs = set(
         os.path.abspath(os.path.split(p)[0]) for p in Git(".").ls_files().split("\n")
     )
-    ignore_rel_dirs = ["docs", "scripts", "experiments", "src", ".pip_src"]
+    ignore_rel_dirs = [
+        "docs",
+        "scripts",
+        "experiments",
+        "src",
+        ".pip_src",
+        "dist",
+        "build",
+    ]
     ignore_abs_dirs = set(
         os.path.abspath(os.path.join(str(parent_folder_path), rel_dir))
         for rel_dir in ignore_rel_dirs
