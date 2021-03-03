@@ -207,6 +207,15 @@ def get_args():
     )
 
     parser.add_argument(
+        "-irs",
+        "--random_shift",
+        default=False,
+        type=bool,
+        required=False,
+        help="Specify if random shift is to be applied to the egocentric observations",
+    )
+
+    parser.add_argument(
         "-tsg",
         "--test_gpus",
         default=None,
@@ -358,6 +367,7 @@ def main():
 
     RANDOM_CROP = args.random_crop
     COLOR_JITTER = args.color_jitter
+    RANDOM_SHIFT = args.random_shift
 
     TEST_GPU_IDS = None
     if args.test_gpus is not None:
@@ -376,7 +386,7 @@ def main():
         cfg.TEST_GPU_IDS = TEST_GPU_IDS
 
     cfg.monkey_patch_sensor(
-        VISUAL_CORRUPTION, VISUAL_SEVERITY, RANDOM_CROP, COLOR_JITTER
+        VISUAL_CORRUPTION, VISUAL_SEVERITY, RANDOM_CROP, COLOR_JITTER, RANDOM_SHIFT
     )
 
     cfg.monkey_patch_datasets(

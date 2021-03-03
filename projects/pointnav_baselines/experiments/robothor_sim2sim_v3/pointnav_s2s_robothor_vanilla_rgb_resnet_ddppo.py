@@ -198,7 +198,12 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
             )
 
     def monkey_patch_sensor(
-        self, corruptions=None, severities=None, random_crop=False, color_jitter=False
+        self,
+        corruptions=None,
+        severities=None,
+        random_crop=False,
+        color_jitter=False,
+        random_shift=False,
     ):
         self.SENSORS = [
             RGBSensorThor(
@@ -209,6 +214,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
                 corruptions=corruptions,
                 severities=severities,
                 random_crop=random_crop,
+                random_translate=random_shift,
                 crop_height=self.CROP_HEIGHT,
                 crop_width=self.CROP_WIDTH,
                 color_jitter=color_jitter,
