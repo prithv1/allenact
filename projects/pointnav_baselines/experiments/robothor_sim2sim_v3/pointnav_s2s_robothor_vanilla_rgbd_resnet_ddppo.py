@@ -214,7 +214,7 @@ class PointNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
                 corruptions=corruptions,
                 severities=severities,
                 random_crop=random_crop,
-                random_shift=random_translate,
+                random_translate=random_shift,
                 crop_height=self.CROP_HEIGHT,
                 crop_width=self.CROP_WIDTH,
                 color_jitter=color_jitter,
