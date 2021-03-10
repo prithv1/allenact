@@ -40,38 +40,38 @@ class RoboThorEnvironment:
         self._camera_crack = f(kwargs, "camera_crack", False)
         print("Camera-Crack ", self._camera_crack)
 
-        self._fov = f(kwargs, "fov", None)
-        print("Field of View is ", self._fov)
+        # self._fov = f(kwargs, "fov", None)
+        # print("Field of View is ", self._fov)
 
-        if self._fov is not None:
-            self.config = dict(
-                rotateStepDegrees=30.0,
-                visibilityDistance=1.0,
-                gridSize=0.25,
-                agentType="stochastic",
-                continuousMode=True,
-                snapToGrid=False,
-                agentMode="locobot",
-                width=640,
-                height=480,
-                fieldOfView=self._fov,
-                agentCount=1,
-                server_class=FifoServer,
-            )
-        else:
-            self.config = dict(
-                rotateStepDegrees=30.0,
-                visibilityDistance=1.0,
-                gridSize=0.25,
-                agentType="stochastic",
-                continuousMode=True,
-                snapToGrid=False,
-                agentMode="locobot",
-                width=640,
-                height=480,
-                agentCount=1,
-                server_class=FifoServer,
-            )
+        # if self._fov is not None:
+        #     self.config = dict(
+        #         rotateStepDegrees=30.0,
+        #         visibilityDistance=1.0,
+        #         gridSize=0.25,
+        #         agentType="stochastic",
+        #         continuousMode=True,
+        #         snapToGrid=False,
+        #         agentMode="locobot",
+        #         width=640,
+        #         height=480,
+        #         fieldOfView=self._fov,
+        #         agentCount=1,
+        #         server_class=FifoServer,
+        #     )
+        # else:
+        self.config = dict(
+            rotateStepDegrees=30.0,
+            visibilityDistance=1.0,
+            gridSize=0.25,
+            agentType="stochastic",
+            continuousMode=True,
+            snapToGrid=False,
+            agentMode="locobot",
+            width=640,
+            height=480,
+            agentCount=1,
+            server_class=FifoServer,
+        )
 
         # Original (no FOV modifications)
         # self.config = dict(
