@@ -339,6 +339,7 @@ class RoboThorEnvironment:
                 # Get environment crack seed
                 scene_split = scene_name.split("_")[-2][-1] + scene_name.split("_")[-1]
                 crack_seed = int(scene_split)
+                print("Crack applied")
                 self.controller.step(action="CameraCrack", randomSeed=crack_seed)
             assert self.last_action_success, "Could not reset to new scene"
 
