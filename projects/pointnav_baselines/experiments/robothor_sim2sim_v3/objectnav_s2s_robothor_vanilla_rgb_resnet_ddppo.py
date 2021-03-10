@@ -306,7 +306,7 @@ class ObjectNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
             nprocesses = 1
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
         elif mode == "test":
-            nprocesses = 10 if torch.cuda.is_available() else 1
+            nprocesses = 15 if torch.cuda.is_available() else 1
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
@@ -469,13 +469,19 @@ class ObjectNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
         seeds: Optional[List[int]] = None,
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
-        return self.valid_task_sampler_args(
+        res = self._get_sampler_args_for_scene_split(
+            scenes_dir=os.path.join(self.TEST_DATASET_DIR, "episodes"),
             process_ind=process_ind,
             total_processes=total_processes,
             devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
+            include_expert_sensor=False,
+            allow_oversample=False,
         )
+        res["scene_directory"] = self.TEST_DATASET_DIR
+        res["loop_dataset"] = False
+        return res
 
         # if self.TEST_DATASET_DIR is None:
         #     get_logger().warning(

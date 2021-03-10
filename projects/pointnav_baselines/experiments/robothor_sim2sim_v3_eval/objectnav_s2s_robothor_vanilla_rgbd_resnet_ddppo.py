@@ -80,7 +80,7 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
         self.CAMERA_WIDTH = 400  # 640
         self.CAMERA_HEIGHT = 300  # 480
         self.SCREEN_SIZE = 224
-        self.MAX_STEPS = 500
+        self.MAX_STEPS = 300  # Usually set to 500
 
         # Random crop specifications for data augmentations
         self.CROP_WIDTH = 320  # 512 (for 640)
@@ -481,7 +481,6 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
         res["scene_directory"] = self.TEST_DATASET_DIR
         res["loop_dataset"] = False
         return res
-
         # if self.TEST_DATASET_DIR is None:
         #     get_logger().warning(
         #         "No test dataset dir detected, running test on validation set instead."

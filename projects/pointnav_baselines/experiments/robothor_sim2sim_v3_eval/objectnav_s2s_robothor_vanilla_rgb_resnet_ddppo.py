@@ -62,8 +62,8 @@ from projects.objectnav_baselines.models.object_nav_models import (
 from allenact.base_abstractions.sensor import DepthSensor, RGBSensor
 
 
-class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
-    """A ObjectNav Experiment Config using RGBD sensors and DDPPO"""
+class ObjectNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
+    """A ObjectNav Experiment Config using RGB sensors and DDPPO"""
 
     def __init__(self):
         super().__init__()
@@ -73,6 +73,7 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
 
         self.STEP_SIZE = 0.25
         self.ROTATION_DEGREES = 30.0
+        self.DISTANCE_TO_GOAL = 0.2
         self.VISIBILITY_DISTANCE = 1.0
         self.STOCHASTIC = True
         self.HORIZONTAL_FIELD_OF_VIEW = 79
@@ -80,7 +81,7 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
         self.CAMERA_WIDTH = 400  # 640
         self.CAMERA_HEIGHT = 300  # 480
         self.SCREEN_SIZE = 224
-        self.MAX_STEPS = 500
+        self.MAX_STEPS = 300  # 500
 
         # Random crop specifications for data augmentations
         self.CROP_WIDTH = 320  # 512 (for 640)
@@ -135,25 +136,25 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
                     "output_uuid": "rgb_resnet",
                 },
             ),
-            Builder(
-                ResNetPreprocessor,
-                {
-                    "input_height": self.SCREEN_SIZE,
-                    "input_width": self.SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["depth_lowres"],
-                    "output_uuid": "depth_resnet",
-                },
-            ),
+            # Builder(
+            #     ResNetPreprocessor,
+            #     {
+            #         "input_height": self.SCREEN_SIZE,
+            #         "input_width": self.SCREEN_SIZE,
+            #         "output_width": 7,
+            #         "output_height": 7,
+            #         "output_dims": 512,
+            #         "pool": False,
+            #         "torchvision_resnet_model": models.resnet18,
+            #         "input_uuids": ["depth_lowres"],
+            #         "output_uuid": "depth_resnet",
+            #     },
+            # ),
         ]
 
         OBSERVATIONS = [
             "rgb_resnet",
-            "depth_resnet",
+            # "depth_resnet",
             "goal_object_type_ind",
         ]
 
@@ -174,12 +175,12 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
                 height=self.CAMERA_HEIGHT,
             ),
             include_private_scenes=False,
-            renderDepthImage=True,
+            renderDepthImage=False,
         )
 
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-Vanilla-RGBD-ResNet-DDPPO"
+        return "Objectnav-RoboTHOR-Vanilla-RGB-ResNet-DDPPO"
 
     def monkey_patch_datasets(self, train_dataset, val_dataset, test_dataset):
         if train_dataset is not None:
@@ -225,12 +226,12 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
                 crop_width=self.CROP_WIDTH,
                 color_jitter=color_jitter,
             ),
-            DepthSensorThor(
-                height=self.SCREEN_SIZE,
-                width=self.SCREEN_SIZE,
-                use_normalization=True,
-                uuid="depth_lowres",
-            ),
+            # DepthSensorThor(
+            #     height=self.SCREEN_SIZE,
+            #     width=self.SCREEN_SIZE,
+            #     use_normalization=True,
+            #     uuid="depth_lowres",
+            # ),
             GoalObjectTypeThorSensor(object_types=self.TARGET_TYPES,),
         ]
 
@@ -273,7 +274,7 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         rgb_uuid = "rgb_resnet"
-        depth_uuid = "depth_resnet"
+        # depth_uuid = "depth_resnet"
         goal_sensor_uuid = "goal_object_type_ind"
 
         return ResnetTensorObjectNavActorCritic(
@@ -281,7 +282,7 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid=rgb_uuid,
-            depth_resnet_preprocessor_uuid=depth_uuid,
+            # depth_resnet_preprocessor_uuid=depth_uuid,
             hidden_size=512,
             goal_dims=32,
         )

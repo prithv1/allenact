@@ -385,6 +385,8 @@ def main():
     if TEST_GPU_IDS is not None:
         cfg.TEST_GPU_IDS = TEST_GPU_IDS
 
+    print(cfg.TEST_GPU_IDS)
+
     cfg.monkey_patch_sensor(
         VISUAL_CORRUPTION, VISUAL_SEVERITY, RANDOM_CROP, COLOR_JITTER, RANDOM_SHIFT
     )

@@ -1,5 +1,5 @@
 """
-Unified base config to run ObjectNav RGB training and evaluation
+Unified base config to run PointNav RGB training and evaluation
 - Can evaluate under specified visual corruptions (exception FOV and Camera-Crack)
 - [TODO] Can also evaluate under specified dynamics corruptions
 """
@@ -36,16 +36,13 @@ from allenact.utils.experiment_utils import (
     LinearDecay,
 )
 
-from allenact_plugins.ithor_plugin.ithor_sensors import (
-    RGBSensorThor,
-    GoalObjectTypeThorSensor,
-)
-from allenact_plugins.ithor_plugin.ithor_util import horizontal_to_vertical_fov
+from allenact_plugins.ithor_plugin.ithor_sensors import RGBSensorThor
 from allenact_plugins.robothor_plugin.robothor_sensors import DepthSensorThor
 from allenact_plugins.robothor_plugin.robothor_sensors import GPSCompassSensorRoboThor
+from allenact_plugins.ithor_plugin.ithor_util import horizontal_to_vertical_fov
 
 from allenact_plugins.robothor_plugin.robothor_task_samplers import (
-    ObjectNavDatasetTaskSampler,
+    PointNavDatasetTaskSampler,
 )
 from allenact_plugins.robothor_plugin.robothor_tasks import ObjectNavTask
 from allenact_plugins.robothor_plugin.robothor_tasks import PointNavTask
@@ -55,15 +52,16 @@ from allenact.embodiedai.preprocessors.resnet import ResNetPreprocessor
 from allenact.algorithms.onpolicy_sync.losses import PPO
 from allenact.algorithms.onpolicy_sync.losses.ppo import PPOConfig
 
-from projects.objectnav_baselines.models.object_nav_models import (
-    ResnetTensorObjectNavActorCritic,
+from projects.pointnav_baselines.models.point_nav_models import (
+    PointNavActorCriticSimpleConvRNN,
+    ResnetTensorPointNavActorCritic,
 )
 
 from allenact.base_abstractions.sensor import DepthSensor, RGBSensor
 
 
-class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
-    """A ObjectNav Experiment Config using RGBD sensors and DDPPO"""
+class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
+    """A PointNav Experiment Config using RGB sensors and DDPPO"""
 
     def __init__(self):
         super().__init__()
@@ -73,14 +71,14 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
 
         self.STEP_SIZE = 0.25
         self.ROTATION_DEGREES = 30.0
-        self.VISIBILITY_DISTANCE = 1.0
+        self.DISTANCE_TO_GOAL = 0.2
         self.STOCHASTIC = True
         self.HORIZONTAL_FIELD_OF_VIEW = 79
 
         self.CAMERA_WIDTH = 400  # 640
         self.CAMERA_HEIGHT = 300  # 480
         self.SCREEN_SIZE = 224
-        self.MAX_STEPS = 500
+        self.MAX_STEPS = 300  # 500
 
         # Random crop specifications for data augmentations
         self.CROP_WIDTH = 320  # 512 (for 640)
@@ -97,27 +95,24 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
         self.NUM_PROCESSES = 60
 
         self.TRAIN_GPU_IDS = list(range(torch.cuda.device_count()))
-        self.SAMPLER_GPU_IDS = self.TRAIN_GPU_IDS
         self.VALID_GPU_IDS = [torch.cuda.device_count() - 1]
         self.TEST_GPU_IDS = [torch.cuda.device_count() - 1]
 
-        self.TARGET_TYPES = tuple(
-            sorted(
-                [
-                    "AlarmClock",
-                    "Apple",
-                    "BaseballBat",
-                    "BasketBall",
-                    "Bowl",
-                    "GarbageCan",
-                    "HousePlant",
-                    "Laptop",
-                    "Mug",
-                    "SprayBottle",
-                    "Television",
-                    "Vase",
-                ]
-            )
+        self.TARGET_TYPES = sorted(
+            [
+                "AlarmClock",
+                "Apple",
+                "BaseballBat",
+                "BasketBall",
+                "Bowl",
+                "GarbageCan",
+                "HousePlant",
+                "Laptop",
+                "Mug",
+                "SprayBottle",
+                "Television",
+                "Vase",
+            ]
         )
 
         self.PREPROCESSORS = [
@@ -135,26 +130,26 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
                     "output_uuid": "rgb_resnet",
                 },
             ),
-            Builder(
-                ResNetPreprocessor,
-                {
-                    "input_height": self.SCREEN_SIZE,
-                    "input_width": self.SCREEN_SIZE,
-                    "output_width": 7,
-                    "output_height": 7,
-                    "output_dims": 512,
-                    "pool": False,
-                    "torchvision_resnet_model": models.resnet18,
-                    "input_uuids": ["depth_lowres"],
-                    "output_uuid": "depth_resnet",
-                },
-            ),
+            # Builder(
+            #     ResNetPreprocessor,
+            #     {
+            #         "input_height": self.SCREEN_SIZE,
+            #         "input_width": self.SCREEN_SIZE,
+            #         "output_width": 7,
+            #         "output_height": 7,
+            #         "output_dims": 512,
+            #         "pool": False,
+            #         "torchvision_resnet_model": models.resnet18,
+            #         "input_uuids": ["depth_lowres"],
+            #         "output_uuid": "depth_resnet",
+            #     },
+            # ),
         ]
 
         OBSERVATIONS = [
             "rgb_resnet",
-            "depth_resnet",
-            "goal_object_type_ind",
+            # "depth_resnet",
+            "target_coordinates_ind",
         ]
 
         self.ENV_ARGS = dict(
@@ -164,7 +159,6 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
             applyActionNoise=self.STOCHASTIC,
             agentType="stochastic",
             rotateStepDegrees=self.ROTATION_DEGREES,
-            visibilityDistance=self.VISIBILITY_DISTANCE,
             gridSize=self.STEP_SIZE,
             snapToGrid=False,
             agentMode="locobot",
@@ -174,33 +168,33 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
                 height=self.CAMERA_HEIGHT,
             ),
             include_private_scenes=False,
-            renderDepthImage=True,
+            renderDepthImage=False,
         )
 
     @classmethod
     def tag(cls):
-        return "Objectnav-RoboTHOR-Vanilla-RGBD-ResNet-DDPPO"
+        return "Pointnav-RoboTHOR-Vanilla-RGB-ResNet-DDPPO"
 
     def monkey_patch_datasets(self, train_dataset, val_dataset, test_dataset):
         if train_dataset is not None:
             self.TRAIN_DATASET_DIR = os.path.join(os.getcwd(), train_dataset)
         else:
             self.TRAIN_DATASET_DIR = os.path.join(
-                os.getcwd(), "datasets/robothor-objectnav/train"
+                os.getcwd(), "datasets/robothor-pointnav/train"
             )
 
         if val_dataset is not None:
             self.VAL_DATASET_DIR = os.path.join(os.getcwd(), val_dataset)
         else:
             self.VAL_DATASET_DIR = os.path.join(
-                os.getcwd(), "datasets/robothor-objectnav/eval_val_0.4_per_sc"
+                os.getcwd(), "datasets/robothor-pointnav/eval_val_0.4_per_sc"
             )
 
         if test_dataset is not None:
             self.TEST_DATASET_DIR = os.path.join(os.getcwd(), test_dataset)
         else:
             self.TEST_DATASET_DIR = os.path.join(
-                os.getcwd(), "datasets/robothor-objectnav/eval_val_0.4_per_sc"
+                os.getcwd(), "datasets/robothor-pointnav/eval_val_0.4_per_sc"
             )
 
     def monkey_patch_sensor(
@@ -225,19 +219,19 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
                 crop_width=self.CROP_WIDTH,
                 color_jitter=color_jitter,
             ),
-            DepthSensorThor(
-                height=self.SCREEN_SIZE,
-                width=self.SCREEN_SIZE,
-                use_normalization=True,
-                uuid="depth_lowres",
-            ),
-            GoalObjectTypeThorSensor(object_types=self.TARGET_TYPES,),
+            # DepthSensorThor(
+            #     height=self.SCREEN_SIZE,
+            #     width=self.SCREEN_SIZE,
+            #     use_normalization=True,
+            #     uuid="depth_lowres",
+            # ),
+            GPSCompassSensorRoboThor(),
         ]
 
     # DD-PPO Base
     # @classmethod
     def training_pipeline(self, **kwargs):
-        ppo_steps = int(300000000)
+        ppo_steps = int(75000000)
         lr = 3e-4
         num_mini_batch = 1
         update_repeats = 4
@@ -273,15 +267,15 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
     @classmethod
     def create_model(cls, **kwargs) -> nn.Module:
         rgb_uuid = "rgb_resnet"
-        depth_uuid = "depth_resnet"
-        goal_sensor_uuid = "goal_object_type_ind"
+        # depth_uuid = "depth_resnet"
+        goal_sensor_uuid = "target_coordinates_ind"
 
-        return ResnetTensorObjectNavActorCritic(
-            action_space=gym.spaces.Discrete(len(ObjectNavTask.class_action_names())),
+        return ResnetTensorPointNavActorCritic(
+            action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
             rgb_resnet_preprocessor_uuid=rgb_uuid,
-            depth_resnet_preprocessor_uuid=depth_uuid,
+            # depth_uuid=depth_uuid,
             hidden_size=512,
             goal_dims=32,
         )
@@ -300,23 +294,19 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
                 if not torch.cuda.is_available()
                 else evenly_distribute_count_into_bins(self.NUM_PROCESSES, len(gpu_ids))
             )
-            sampler_devices = self.SAMPLER_GPU_IDS
+            sampler_devices = self.TRAIN_GPU_IDS
         elif mode == "valid":
-            nprocesses = 1
+            nprocesses = 1 if torch.cuda.is_available() else 0
             gpu_ids = [] if not torch.cuda.is_available() else self.VALID_GPU_IDS
         elif mode == "test":
-            nprocesses = 15 if torch.cuda.is_available() else 1
+            nprocesses = 15
             gpu_ids = [] if not torch.cuda.is_available() else self.TEST_GPU_IDS
         else:
             raise NotImplementedError("mode must be 'train', 'valid', or 'test'.")
 
-        sensors = [*self.SENSORS]
-        if mode != "train":
-            sensors = [s for s in sensors if not isinstance(s, ExpertActionSensor)]
-
         sensor_preprocessor_graph = (
             SensorPreprocessorGraph(
-                source_observation_spaces=SensorSuite(sensors).observation_spaces,
+                source_observation_spaces=SensorSuite(self.SENSORS).observation_spaces,
                 preprocessors=self.PREPROCESSORS,
             )
             if mode == "train"
@@ -338,7 +328,7 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
 
     @classmethod
     def make_sampler_fn(cls, **kwargs) -> TaskSampler:
-        return ObjectNavDatasetTaskSampler(**kwargs)
+        return PointNavDatasetTaskSampler(**kwargs)
 
     @staticmethod
     def _partition_inds(n: int, num_parts: int):
@@ -355,7 +345,6 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
         seeds: Optional[List[int]],
         deterministic_cudnn: bool,
         include_expert_sensor: bool = True,
-        allow_oversample: bool = False,
     ) -> Dict[str, Any]:
         path = os.path.join(scenes_dir, "*.json.gz")
         scenes = [scene.split("/")[-1].split(".")[0] for scene in glob.glob(path)]
@@ -374,12 +363,6 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
             " You can avoid this by setting a number of workers divisible by the number of scenes"
         )
         if total_processes > len(scenes):  # oversample some scenes -> bias
-            if not allow_oversample:
-                raise RuntimeError(
-                    f"Cannot have `total_processes > len(scenes)`"
-                    f" ({total_processes} > {len(scenes)}) when `allow_oversample` is `False`."
-                )
-
             if total_processes % len(scenes) != 0:
                 get_logger().warning(oversample_warning)
             scenes = scenes * int(ceil(total_processes / len(scenes)))
@@ -425,13 +408,12 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            scenes_dir=os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
-            process_ind=process_ind,
-            total_processes=total_processes,
+            os.path.join(self.TRAIN_DATASET_DIR, "episodes"),
+            process_ind,
+            total_processes,
             devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
-            allow_oversample=True,
         )
         res["scene_directory"] = self.TRAIN_DATASET_DIR
         res["loop_dataset"] = True
@@ -447,14 +429,13 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
         deterministic_cudnn: bool = False,
     ) -> Dict[str, Any]:
         res = self._get_sampler_args_for_scene_split(
-            scenes_dir=os.path.join(self.VAL_DATASET_DIR, "episodes"),
-            process_ind=process_ind,
-            total_processes=total_processes,
+            os.path.join(self.VAL_DATASET_DIR, "episodes"),
+            process_ind,
+            total_processes,
             devices=devices,
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
             include_expert_sensor=False,
-            allow_oversample=False,
         )
         res["scene_directory"] = self.VAL_DATASET_DIR
         res["loop_dataset"] = False
@@ -481,32 +462,3 @@ class ObjectNavS2SRGBDResNetDDPPO(ExperimentConfig, ABC):
         res["scene_directory"] = self.TEST_DATASET_DIR
         res["loop_dataset"] = False
         return res
-
-        # if self.TEST_DATASET_DIR is None:
-        #     get_logger().warning(
-        #         "No test dataset dir detected, running test on validation set instead."
-        #     )
-        #     return self.valid_task_sampler_args(
-        #         process_ind=process_ind,
-        #         total_processes=total_processes,
-        #         devices=devices,
-        #         seeds=seeds,
-        #         deterministic_cudnn=deterministic_cudnn,
-        #     )
-
-        # else:
-        #     res = self._get_sampler_args_for_scene_split(
-        #         scenes_dir=os.path.join(self.TEST_DATASET_DIR, "episodes"),
-        #         process_ind=process_ind,
-        #         total_processes=total_processes,
-        #         devices=devices,
-        #         seeds=seeds,
-        #         deterministic_cudnn=deterministic_cudnn,
-        #         include_expert_sensor=False,
-        #         allow_oversample=False,
-        #     )
-        #     res["env_args"]["all_metadata_available"] = False
-        #     res["rewards_config"] = {**res["rewards_config"], "shaping_weight": 0}
-        #     res["scene_directory"] = self.TEST_DATASET_DIR
-        #     res["loop_dataset"] = False
-        #     return res
