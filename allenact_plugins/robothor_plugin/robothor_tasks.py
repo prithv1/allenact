@@ -170,9 +170,13 @@ class PointNavTask(Task[RoboThorEnvironment]):
             if self.env._drift:
                 if action_str == "MoveAhead":
                     if self.env._drift_dir == "Left":
-                        self.env.step(action="RotateLeft", degrees=self.env._drift_deg)
+                        self.env.step(
+                            {"action": "RotateLeft", "degrees": self.env._drift_deg}
+                        )
                     else:
-                        self.env.step(action="RotateRight", degrees=self.env._drift_deg)
+                        self.env.step(
+                            {"action": "RotateRight", "degrees": self.env._drift_deg}
+                        )
 
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
