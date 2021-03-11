@@ -61,11 +61,18 @@ class RoboThorEnvironment:
         self._drift = f(kwargs, "drift", False)
         print("Drift Mode is ", self._drift)
 
+        self._dreckon = f(kwargs, "dead_reckoning", False)
+        print("Dead Reckoning Mode is ", self._dreckon)
+
         self._drift_dir = None
 
         self._drift_deg = f(kwargs, "drift_deg", 1.15)  # Hardcoded
 
         self._failed_action = None
+
+        self._agent_next_pos = None
+        self._agent_next_rot = None
+        self._agent_nsteps = 0
 
         # if self._fov is not None:
         #     self.config = dict(
@@ -131,6 +138,8 @@ class RoboThorEnvironment:
             self.distance_cache = DynamicDistanceCache(rounding=1)
 
         self.agent_count = self.config["agentCount"]
+        self.move_step = self.config["gridSize"]
+        self.rot_step = self.config["rotateStepDegrees"]
 
     def initialize_grid_dimensions(
         self, reachable_points: Collection[Dict[str, float]]
@@ -333,6 +342,25 @@ class RoboThorEnvironment:
             "horizon": round(float(agent_meta["cameraHorizon"]), 1),
         }
 
+    def estimate_next_pos(self, action_str, curr_x, curr_z, curr_rot, d, theta):
+        if action_str == "RotateLeft":
+            pred_rot = (curr_rot - theta) % 360.0
+            pred_x = curr_x
+            pred_z = curr_z
+        elif action_str == "RotateRight":
+            pred_rot = (curr_rot + theta) % 360.0
+            pred_x = curr_x
+            pred_z = curr_z
+        elif action_str == "MoveAhead":
+            pred_x = curr_x + d * math.sin(math.radians(theta))
+            pred_z = curr_z + d * math.cos(math.radians(theta))
+            pred_rot = curr_rot
+        else:
+            pred_x = curr_x
+            pred_z = curr_z
+            pred_rot = curr_rot
+        return pred_x, pred_z, pred_rot
+
     def teleport(
         self,
         pose: Dict[str, float],
@@ -358,6 +386,8 @@ class RoboThorEnvironment:
     ) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
+            
+            self._agent_nsteps = 0
 
             reset_config = {"scene": scene_name}
 

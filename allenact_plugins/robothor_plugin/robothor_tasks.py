@@ -144,6 +144,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
 
         action_str = self.action_names()[action]
         self.task_info["taken_actions"].append(action_str)
+        self.env._agent_nsteps += 1
 
         # Store drift and motor failure meta-data
         if self.env._motor_failure:
@@ -161,6 +162,28 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self.last_action_success = self._success
             self.task_info["action_success"].append(self.last_action_success)
         else:
+
+            # Computing estimated state for agent
+            # Only applicable for translation and rotation
+            if self.env._dreckon:
+                # Get current agent state
+                pose = self.env.agent_state()
+                curr_x, curr_z, curr_rot = pose["x"], pose["z"], pose["rotation"]["y"]
+                pred_x, pred_z, pred_rot = self.env.estimate_next_pos(
+                    aciton_str, curr_x, curr_z, curr_rot, self.env.move_step, self.env.rot_step
+                )
+                self.env._agent_next_pos = {
+                    "x": pred_x,
+                    "y": pose["y"],
+                    "z": pred_z,
+                    "rotation": {
+                        "x": pose["rotation"]["x"],
+                        "y": curr_rot,
+                        "z": pose["rotation"]["z"],
+                    }
+                    "horizon": pose["horizon"]
+                }
+
             # Motor Failure Functionality
             if self.env._motor_failure:
                 if action_str == self.env._failed_action:
