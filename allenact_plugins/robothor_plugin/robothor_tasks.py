@@ -170,7 +170,12 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 pose = self.env.agent_state()
                 curr_x, curr_z, curr_rot = pose["x"], pose["z"], pose["rotation"]["y"]
                 pred_x, pred_z, pred_rot = self.env.estimate_next_pos(
-                    aciton_str, curr_x, curr_z, curr_rot, self.env.move_step, self.env.rot_step
+                    aciton_str,
+                    curr_x,
+                    curr_z,
+                    curr_rot,
+                    self.env.move_step,
+                    self.env.rot_step,
                 )
                 self.env._agent_next_pos = {
                     "x": pred_x,
@@ -180,8 +185,8 @@ class PointNavTask(Task[RoboThorEnvironment]):
                         "x": pose["rotation"]["x"],
                         "y": curr_rot,
                         "z": pose["rotation"]["z"],
-                    }
-                    "horizon": pose["horizon"]
+                    },
+                    "horizon": pose["horizon"],
                 }
 
             # Motor Failure Functionality
