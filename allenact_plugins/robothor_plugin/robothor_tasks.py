@@ -145,6 +145,15 @@ class PointNavTask(Task[RoboThorEnvironment]):
         action_str = self.action_names()[action]
         self.task_info["taken_actions"].append(action_str)
 
+        # Store drift and motor failure meta-data
+        if self.env._motor_failure:
+            self.task_info["motor_failure"] = True
+            self.task_info["failed_action"] = self.env._failed_action
+
+        if self.env._drift:
+            self.task_info["drift_dir"] = self.env._drift_dir
+            self.task_info["drift_deg"] = self.env._drift_deg
+
         if action_str == END:
             self._took_end_action = True
             self.task_info["took_end_action"] = self._took_end_action
@@ -152,6 +161,19 @@ class PointNavTask(Task[RoboThorEnvironment]):
             self.last_action_success = self._success
             self.task_info["action_success"].append(self.last_action_success)
         else:
+            # Motor Failure Functionality
+            if self.env._motor_failure:
+                if action_str == self.env._failed_action:
+                    action_str = "Pass"
+
+            # Drift Functionality
+            if self.env._drift:
+                if action_str == "MoveAhead":
+                    if self.env._drift_dir == "Left":
+                        self.env.step(action="RotateLeft", degrees=self.env._drift_deg)
+                    else:
+                        self.env.step(action="RotateRight", degrees=self.env._drift_deg)
+
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
             self.task_info["action_success"].append(self.last_action_success)
@@ -372,6 +394,15 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
         self.task_info["taken_actions"].append(action_str)
 
+        # Store this meta-data
+        if self.env._motor_failure:
+            self.task_info["motor_failure"] = True
+            self.task_info["failed_action"] = self.env._failed_action
+
+        if self.env._drift:
+            self.task_info["drift_dir"] = self.env._drift_dir
+            self.task_info["drift_deg"] = self.env._drift_deg
+
         if action_str == END:
             self._took_end_action = True
             self.task_info["took_end_action"] = self._took_end_action
@@ -379,6 +410,23 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.last_action_success = self._success
             self.task_info["action_success"].append(self.last_action_success)
         else:
+            # Functionality for motor failure
+            if self.env._motor_failure:
+                if action_str == self.env._failed_action:
+                    action_str = "Pass"
+
+            # Drift Functionality
+            if self.env._drift:
+                if action_str == "MoveAhead":
+                    if self.env._drift_dir == "Left":
+                        self.env.step(
+                            {"action": "RotateLeft", "degrees": self.env._drift_deg}
+                        )
+                    else:
+                        self.env.step(
+                            {"action": "RotateRight", "degrees": self.env._drift_deg}
+                        )
+
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
             self.task_info["action_success"].append(self.last_action_success)

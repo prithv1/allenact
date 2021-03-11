@@ -43,6 +43,30 @@ class RoboThorEnvironment:
         # self._fov = f(kwargs, "fov", None)
         # print("Field of View is ", self._fov)
 
+        self._motor_failure = f(kwargs, "motor_failure", False)
+        print("Motor Failure Mode (Left / Right) is ", self._motor_failure)
+
+        self._const_translate = f(kwargs, "constTranslate", False)
+        print("Constant (but Uniform) translate friction", self._const_translate)
+
+        self._const_rotate = f(kwargs, "constRotate", False)
+        print("Constant (but Uniform) Rotate friction", self._const_rotate)
+
+        self._stoch_translate = f(kwargs, "stochTranslate", False)
+        print("Stoch translate friction", self._stoch_translate)
+
+        self._stoch_rotate = f(kwargs, "stochRotate", False)
+        print("Stoch Rotate friction", self._stoch_rotate)
+
+        self._drift = f(kwargs, "drift", False)
+        print("Drift Mode is ", self._drift)
+
+        self._drift_dir = None
+
+        self._drift_deg = f(kwargs, "drift_deg", 1.15)  # Hardcoded
+
+        self._failed_action = None
+
         # if self._fov is not None:
         #     self.config = dict(
         #         rotateStepDegrees=30.0,
@@ -334,7 +358,61 @@ class RoboThorEnvironment:
     ) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
-            self.controller.reset(scene_name)
+
+            reset_config = {"scene": scene_name}
+
+            # Motion Bias (Constant Specifications) # Hardcoded
+            if self._const_translate or self._const_rotate:
+                fric_mode = random.choice(
+                    ["high", "low"]
+                )  # Episode-level constant friction bias -- select whether high or low friction
+
+            if self._const_translate:
+                translate_devs = np.linspace(
+                    0.05, 0.15, 3, endpoint=True
+                ).tolist()  # Select the (absolute) deviation magnitude in meters
+                t_deviation = random.choice(translate_devs)
+                if fric_mode == "high":
+                    update_gridSize = self.config["gridSize"] - t_deviation
+                else:  # low friction (slippage)
+                    update_gridSize = self.config["gridSize"] + t_deviation
+                recursive_update(reset_config, {"gridSize": update_gridSize})
+
+            if self._const_rotate:
+                rotate_devs = np.linspace(
+                    5.0, 15.0, 3, endpoint=True
+                ).tolist()  # Select the (absolute) deviation magnitude in degrees
+                r_deviation = random.choice(rotate_devs)
+                if fric_mode == "high":
+                    update_rotSize = self.config["rotateStepDegrees"] - r_deviation
+                else:
+                    update_rotSize = self.config["rotateStepDegrees"] + r_deviation
+                recursive_update(reset_config, {"rotateStepDegrees": update_rotSize})
+
+            # Motion Bias (Stochastic Specifications) # Hardcoded
+            if self._stoch_translate:
+                t_sigma = 0.1  # Translation standard deviation in meters
+                recursive_update(reset_config, {"movementGaussianSigma": t_sigma})
+
+            if self._stoch_rotate:
+                r_sigma = 10.0  # Rotation standard deviation in degrees
+                recursive_update(reset_config, {"rotateGaussianSigma": r_sigma})
+
+            # Failed Action
+            if self._motor_failure:
+                self._failed_action = random.choice(["RotateLeft", "RotateRight"])
+
+            # Drift Direction
+            if self._drift:
+                self._drift_dir = random.choice(
+                    ["Left", "Right"]
+                )  # Choose direction of drift per-episode
+
+            self.controller.reset(
+                **reset_config
+            )  # Reset the controller using multiple parameters
+
+            # self.controller.reset(scene_name) # Older controller reset
             if self._camera_crack:  # Add camera-crack if specified
                 # Get environment crack seed
                 scene_split = scene_name.split("_")[-2][-1] + scene_name.split("_")[-1]

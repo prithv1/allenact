@@ -162,6 +162,69 @@ def get_args():
     )
 
     parser.add_argument(
+        "-dcr",
+        "--dyn_corr_mode",
+        default=False,
+        type=bool,
+        required=False,
+        help="Whether to apply dynamics corruptions",
+    )
+
+    parser.add_argument(
+        "-mf",
+        "--motor_failure",
+        default=False,
+        type=bool,
+        required=False,
+        help="Whether to apply motor failure mode",
+    )
+
+    parser.add_argument(
+        "-ctr",
+        "--const_translate",
+        default=False,
+        type=bool,
+        required=False,
+        help="Whether to apply constant translation bias",
+    )
+
+    parser.add_argument(
+        "-crt",
+        "--const_rotate",
+        default=False,
+        type=bool,
+        required=False,
+        help="Whether to apply constant rotation bias",
+    )
+
+    parser.add_argument(
+        "-str",
+        "--stoch_translate",
+        default=False,
+        type=bool,
+        required=False,
+        help="Whether to apply stochastic translation bias",
+    )
+
+    parser.add_argument(
+        "-srt",
+        "--stoch_rotate",
+        default=False,
+        type=bool,
+        required=False,
+        help="Whether to apply stochastic rotation bias",
+    )
+
+    parser.add_argument(
+        "-dr",
+        "--drift",
+        default=False,
+        type=bool,
+        required=False,
+        help="Whether to apply drift in translation",
+    )
+
+    parser.add_argument(
         "-trd",
         "--training_dataset",
         default=None,
@@ -369,6 +432,14 @@ def main():
     COLOR_JITTER = args.color_jitter
     RANDOM_SHIFT = args.random_shift
 
+    # Dynamics Corruptions
+    MOTOR_FAIL = args.motor_failure
+    CONST_TRANSLATE = args.const_translate
+    CONST_ROTATE = args.const_rotate
+    STOCH_TRANSLATE = args.stoch_translate
+    STOCH_ROTATE = args.stoch_rotate
+    DRIFT = args.drift
+
     TEST_GPU_IDS = None
     if args.test_gpus is not None:
         TEST_GPU_IDS = [int(x) for x in args.test_gpus.split(",")]
@@ -394,6 +465,16 @@ def main():
     cfg.monkey_patch_datasets(
         TRAINING_DATASET_DIR, VALIDATION_DATASET_DIR, TEST_DATASET_DIR
     )
+
+    if args.dyn_corr_mode:
+        cfg.monkey_patch_env_args(
+            MOTOR_FAIL,
+            CONST_TRANSLATE,
+            CONST_ROTATE,
+            STOCH_TRANSLATE,
+            STOCH_ROTATE,
+            DRIFT,
+        )
 
     if args.test_date is None:
         OnPolicyRunner(
