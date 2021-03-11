@@ -228,6 +228,7 @@ class DeadReckoningGPSCompassSensorRoboThor(Sensor[RoboThorEnvironment, PointNav
             agent_state = env.agent_state()
         else:
             agent_state = env._agent_next_pos
+        # print(agent_state)
         agent_position = np.array([agent_state[k] for k in ["x", "y", "z"]])
         rotation_world_agent = self.quaternion_from_y_angle(
             agent_state["rotation"]["y"]
