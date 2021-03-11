@@ -170,7 +170,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 pose = self.env.agent_state()
                 curr_x, curr_z, curr_rot = pose["x"], pose["z"], pose["rotation"]["y"]
                 pred_x, pred_z, pred_rot = self.env.estimate_next_pos(
-                    aciton_str,
+                    action_str,
                     curr_x,
                     curr_z,
                     curr_rot,
