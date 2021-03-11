@@ -143,6 +143,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
         action = cast(int, action)
 
         action_str = self.action_names()[action]
+        self.task_info["taken_actions"].append(action_str)
 
         if action_str == END:
             self._took_end_action = True
@@ -232,6 +233,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
             reward += self.reward_configs.get("reached_max_steps_reward", 0.0)
 
         self._rewards.append(float(reward))
+        self.task_info["ep_rewards"].append(float(reward))
         return float(reward)
 
     def dist_to_target(self):
@@ -307,8 +309,31 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
         self.travelled_distance = 0.0
 
         self.task_info["followed_path"] = [self.env.agent_state()]
-        self.task_info["taken_actions"] = []
         self.task_info["action_names"] = self.action_names()
+
+        self.task_info[
+            "taken_actions"
+        ] = []  # Keep a log of actions taken by the agent per-step in an episode
+
+        self.task_info[
+            "action_success"
+        ] = []  # Track if per-step actions were successful or not
+
+        self.task_info["shaped_rew"] = []  # Track the per-step shaped rewards
+
+        self.task_info[
+            "goal_in_range"
+        ] = []  # Track if the goal was in range w.r.t. an undertaken action
+
+        self.task_info[
+            "far_from_goal"
+        ] = []  # Track the distance to goal w.r.t. an undertaken action
+
+        self.task_info[
+            "took_end_action"
+        ]: bool = False  # Whether or not the end action was called
+
+        self.task_info["ep_rewards"] = []  # Track reward per step
 
         if self._all_metadata_available:
             self.last_geodesic_distance = self.env.distance_to_object_type(
@@ -349,11 +374,14 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
 
         if action_str == END:
             self._took_end_action = True
+            self.task_info["took_end_action"] = self._took_end_action
             self._success = self._is_goal_in_range()
             self.last_action_success = self._success
+            self.task_info["action_success"].append(self.last_action_success)
         else:
             self.env.step({"action": action_str})
             self.last_action_success = self.env.last_action_success
+            self.task_info["action_success"].append(self.last_action_success)
             pose = self.env.agent_state()
             self.path.append({k: pose[k] for k in ["x", "y", "z"]})
             self.task_info["followed_path"].append(pose)
@@ -361,6 +389,13 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             self.travelled_distance += IThorEnvironment.position_dist(
                 p0=self.path[-1], p1=self.path[-2], ignore_y=True
             )
+
+        self.task_info["shaped_rew"].append(self.shaping())
+        self.task_info["goal_in_range"].append(self._is_goal_in_range())
+        self.task_info["far_from_goal"].append(
+            self.env.distance_to_object_type(self.task_info["object_type"])
+        )
+
         step_result = RLStepResult(
             observation=self.get_observations(),
             reward=self.judge(),
@@ -439,6 +474,7 @@ class ObjectNavTask(Task[RoboThorEnvironment]):
             reward += self.reward_configs.get("reached_max_steps_reward", 0.0)
 
         self._rewards.append(float(reward))
+        self.task_info["ep_rewards"].append(float(reward))
         return float(reward)
 
     def get_observations(self, **kwargs) -> Any:
