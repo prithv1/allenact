@@ -66,7 +66,8 @@ class RoboThorEnvironment:
 
         self._drift_dir = None
 
-        self._drift_deg = f(kwargs, "drift_deg", 1.15)  # Hardcoded
+        # self._drift_deg = f(kwargs, "drift_deg", 1.15)  # Hardcoded
+        self._drift_deg = f(kwargs, "drift_deg", 11.54)  # Hardcoded
 
         self._failed_action = None
 
@@ -386,7 +387,7 @@ class RoboThorEnvironment:
     ) -> None:
         """Resets scene to a known initial state."""
         if scene_name is not None and scene_name != self.scene_name:
-            
+
             self._agent_nsteps = 0
 
             reset_config = {"scene": scene_name}
