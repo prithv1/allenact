@@ -61,6 +61,7 @@ def parse_results(search_dir):
     metrics = ["success", "spl", "soft_spl", "soft_progress", "ep_length"]
 
     # Load all files
+    df_index = []
     for f in files:
         res = json.load(open(f, "r"))[0]
         res = {k: v for k, v in res.items() if k in metrics}
@@ -77,10 +78,11 @@ def parse_results(search_dir):
         if res_set is None:
             res_set = "Clean"
         res["setting"] = res_set
+        df_index.append(res_set)
         data.append(res)
 
     # Convert to dataframe
-    data_df = pd.DataFrame(data)
+    data_df = pd.DataFrame(data, index=df_index)
     data_df.reindex(INDEX)
     print(data_df[["setting"] + metrics])
 
