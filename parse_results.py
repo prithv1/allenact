@@ -83,8 +83,8 @@ def parse_results(search_dir):
 
     # Convert to dataframe
     data_df = pd.DataFrame(data)
-    data_df = data_df.sort_values(by="setting", key=lambda col: INDEX.index(col))
-    # data_df = data_df.reindex(INDEX)
+    # data_df = data_df.sort_values(by="setting", key=lambda col: INDEX.index(col))
+    # # data_df = data_df.reindex(INDEX)
     print(data_df[["setting"] + metrics])
 
 
