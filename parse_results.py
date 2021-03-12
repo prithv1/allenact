@@ -33,7 +33,7 @@ SETTING_DICT = {
 }
 
 
-def parse_results(search_dir, settings):
+def parse_results(search_dir):
     # Get all the json files
     files = glob.glob(search_dir + "/**/**/*.json")
     data = []
@@ -77,3 +77,6 @@ if __name__ == "__main__":
         required=True,
         help="Mode specifies the experimental setting",
     )
+
+    args = parser.parse_args()
+    parse_results(RES_DIR[args.mode])
