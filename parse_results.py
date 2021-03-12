@@ -80,7 +80,8 @@ def parse_results(search_dir):
         data.append(res)
 
     # Convert to dataframe
-    data_df = pd.DataFrame(data, index=INDEX)
+    data_df = pd.DataFrame(data)
+    data_df.reindex(INDEX)
     print(data_df[["setting"] + metrics])
 
 
