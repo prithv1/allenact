@@ -32,6 +32,27 @@ SETTING_DICT = {
     "speckle_noise_s5_mb_stoch": "S.N. + M.B. (S)",
 }
 
+INDEX = [
+    "Clean",
+    "Motion Blur",
+    "Lighting",
+    "FOV",
+    "Defocus Blur",
+    "Camera-Crack",
+    "Speckle Noise",
+    "Spatter",
+    "M.B. (C)",
+    "M.B. (S)",
+    "Drift",
+    "M.F.",
+    "D.B. + M.B. (S)",
+    "S.N. + M.B. (S)",
+    "Spt. + M.B. (S)",
+    "D.B. + Drift",
+    "S.N. + Drift",
+    "Spt. + Drift",
+]
+
 
 def parse_results(search_dir):
     # Get all the json files
@@ -51,15 +72,15 @@ def parse_results(search_dir):
         res_set = None
         for k, v in SETTING_DICT.items():
             if k in f:
-                res_set = k
+                res_set = v
                 break
         if res_set is None:
-            res_set = "clean"
+            res_set = "Clean"
         res["setting"] = res_set
         data.append(res)
 
     # Convert to dataframe
-    data_df = pd.DataFrame(data)
+    data_df = pd.DataFrame(data, index=INDEX)
     print(data_df[["setting"] + metrics])
 
 
