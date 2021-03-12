@@ -66,8 +66,8 @@ class RoboThorEnvironment:
 
         self._drift_dir = None
 
-        # self._drift_deg = f(kwargs, "drift_deg", 1.15)  # Hardcoded
-        self._drift_deg = f(kwargs, "drift_deg", 11.54)  # Hardcoded
+        self._drift_deg = f(kwargs, "drift_deg", 1.15)  # Hardcoded
+        # self._drift_deg = f(kwargs, "drift_deg", 11.54)  # Hardcoded
 
         self._failed_action = None
 
@@ -124,6 +124,48 @@ class RoboThorEnvironment:
             assert kwargs["agentCount"] > 0
 
         recursive_update(self.config, {**kwargs, "agentMode": "locobot"})
+
+        # Motion Bias (Constant Specifications) # Hardcoded
+        if self._const_translate or self._const_rotate:
+            fric_mode = random.choice(
+                ["high", "low"]
+            )  # Episode-level constant friction bias -- select whether high or low friction
+
+        if self._const_translate:
+            translate_devs = np.linspace(
+                0.05, 0.15, 3, endpoint=True
+            ).tolist()  # Select the (absolute) deviation magnitude in meters
+            t_deviation = random.choice(translate_devs)
+            if fric_mode == "high":
+                update_gridSize = self.config["gridSize"] - t_deviation
+            else:  # low friction (slippage)
+                update_gridSize = self.config["gridSize"] + t_deviation
+            self.config["gridSize"] = update_gridSize
+            # recursive_update(reset_config, {"gridSize": update_gridSize})
+
+        if self._const_rotate:
+            rotate_devs = np.linspace(
+                5.0, 15.0, 3, endpoint=True
+            ).tolist()  # Select the (absolute) deviation magnitude in degrees
+            r_deviation = random.choice(rotate_devs)
+            if fric_mode == "high":
+                update_rotSize = self.config["rotateStepDegrees"] - r_deviation
+            else:
+                update_rotSize = self.config["rotateStepDegrees"] + r_deviation
+            self.config["rotateStepDegrees"] = update_rotSize
+            # recursive_update(reset_config, {"rotateStepDegrees": update_rotSize})
+
+        # Motion Bias (Stochastic Specifications) # Hardcoded
+        if self._stoch_translate:
+            t_sigma = 0.1  # Translation standard deviation in meters
+            self.config["movementGaussianSigma"] = t_sigma
+            # recursive_update(reset_config, {"movementGaussianSigma": t_sigma})
+
+        if self._stoch_rotate:
+            r_sigma = 10.0  # Rotation standard deviation in degrees
+            self.config["rotateGaussianSigma"] = r_sigma
+            # recursive_update(reset_config, {"rotateGaussianSigma": r_sigma})
+
         self.controller = Controller(**self.config,)
         self.all_metadata_available = all_metadata_available
 
@@ -390,44 +432,44 @@ class RoboThorEnvironment:
 
             self._agent_nsteps = 0
 
-            reset_config = {"scene": scene_name}
+            # reset_config = {"scene": scene_name}
 
-            # Motion Bias (Constant Specifications) # Hardcoded
-            if self._const_translate or self._const_rotate:
-                fric_mode = random.choice(
-                    ["high", "low"]
-                )  # Episode-level constant friction bias -- select whether high or low friction
+            # # Motion Bias (Constant Specifications) # Hardcoded
+            # if self._const_translate or self._const_rotate:
+            #     fric_mode = random.choice(
+            #         ["high", "low"]
+            #     )  # Episode-level constant friction bias -- select whether high or low friction
 
-            if self._const_translate:
-                translate_devs = np.linspace(
-                    0.05, 0.15, 3, endpoint=True
-                ).tolist()  # Select the (absolute) deviation magnitude in meters
-                t_deviation = random.choice(translate_devs)
-                if fric_mode == "high":
-                    update_gridSize = self.config["gridSize"] - t_deviation
-                else:  # low friction (slippage)
-                    update_gridSize = self.config["gridSize"] + t_deviation
-                recursive_update(reset_config, {"gridSize": update_gridSize})
+            # if self._const_translate:
+            #     translate_devs = np.linspace(
+            #         0.05, 0.15, 3, endpoint=True
+            #     ).tolist()  # Select the (absolute) deviation magnitude in meters
+            #     t_deviation = random.choice(translate_devs)
+            #     if fric_mode == "high":
+            #         update_gridSize = self.config["gridSize"] - t_deviation
+            #     else:  # low friction (slippage)
+            #         update_gridSize = self.config["gridSize"] + t_deviation
+            #     recursive_update(reset_config, {"gridSize": update_gridSize})
 
-            if self._const_rotate:
-                rotate_devs = np.linspace(
-                    5.0, 15.0, 3, endpoint=True
-                ).tolist()  # Select the (absolute) deviation magnitude in degrees
-                r_deviation = random.choice(rotate_devs)
-                if fric_mode == "high":
-                    update_rotSize = self.config["rotateStepDegrees"] - r_deviation
-                else:
-                    update_rotSize = self.config["rotateStepDegrees"] + r_deviation
-                recursive_update(reset_config, {"rotateStepDegrees": update_rotSize})
+            # if self._const_rotate:
+            #     rotate_devs = np.linspace(
+            #         5.0, 15.0, 3, endpoint=True
+            #     ).tolist()  # Select the (absolute) deviation magnitude in degrees
+            #     r_deviation = random.choice(rotate_devs)
+            #     if fric_mode == "high":
+            #         update_rotSize = self.config["rotateStepDegrees"] - r_deviation
+            #     else:
+            #         update_rotSize = self.config["rotateStepDegrees"] + r_deviation
+            #     recursive_update(reset_config, {"rotateStepDegrees": update_rotSize})
 
-            # Motion Bias (Stochastic Specifications) # Hardcoded
-            if self._stoch_translate:
-                t_sigma = 0.1  # Translation standard deviation in meters
-                recursive_update(reset_config, {"movementGaussianSigma": t_sigma})
+            # # Motion Bias (Stochastic Specifications) # Hardcoded
+            # if self._stoch_translate:
+            #     t_sigma = 0.1  # Translation standard deviation in meters
+            #     recursive_update(reset_config, {"movementGaussianSigma": t_sigma})
 
-            if self._stoch_rotate:
-                r_sigma = 10.0  # Rotation standard deviation in degrees
-                recursive_update(reset_config, {"rotateGaussianSigma": r_sigma})
+            # if self._stoch_rotate:
+            #     r_sigma = 10.0  # Rotation standard deviation in degrees
+            #     recursive_update(reset_config, {"rotateGaussianSigma": r_sigma})
 
             # Failed Action
             if self._motor_failure:
@@ -439,11 +481,11 @@ class RoboThorEnvironment:
                     ["Left", "Right"]
                 )  # Choose direction of drift per-episode
 
-            self.controller.reset(
-                **reset_config
-            )  # Reset the controller using multiple parameters
+            # self.controller.reset(
+            #     **reset_config
+            # )  # Reset the controller using multiple parameters
 
-            # self.controller.reset(scene_name) # Older controller reset
+            self.controller.reset(scene_name)  # Older controller reset
             if self._camera_crack:  # Add camera-crack if specified
                 # Get environment crack seed
                 scene_split = scene_name.split("_")[-2][-1] + scene_name.split("_")[-1]
