@@ -13,7 +13,7 @@ from pprint import pprint
 
 SETTING_DICT = {
     "cam_crack_s5": "Camera-Crack",
-    "clean": "Clean",
+    # "clean": "Clean",
     "clean_drift": "Drift",
     "clean_mb_const": "M.B. (C)",
     "clean_mb_stoch": "M.B. (S)",
@@ -43,7 +43,13 @@ def parse_results(search_dir, settings):
     for f in files:
         res = json.load(open(f, "r"))[0]
         res = {k: v for k, v in res.items() if k in metrics}
-        res_set = SETTING_DICT[k] for k,v in SETTING_DICT.items() if k in f else "clean"
+        res_set = None
+        for k, v in SETTING_DICT.items():
+            if k in f:
+                res_set = k
+                break
+        if res_set is None:
+            res_set = "clean"
         res["setting"] = res_set
         data.append(res)
 
