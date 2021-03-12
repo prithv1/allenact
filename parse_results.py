@@ -43,6 +43,9 @@ def parse_results(search_dir):
     for f in files:
         res = json.load(open(f, "r"))[0]
         res = {k: v for k, v in res.items() if k in metrics}
+        for k, v in res.items():
+            if k in ["success", "spl", "soft_spl", "soft_progress"]:
+                res[k] = v * 100
         res_set = None
         for k, v in SETTING_DICT.items():
             if k in f:
@@ -55,7 +58,7 @@ def parse_results(search_dir):
 
     # Convert to dataframe
     data_df = pd.DataFrame(data)
-    print(data_df)
+    print(data_df[["setting"] + metrics])
 
 
 if __name__ == "__main__":
