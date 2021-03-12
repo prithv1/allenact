@@ -45,7 +45,9 @@ def parse_results(search_dir):
         res = {k: v for k, v in res.items() if k in metrics}
         for k, v in res.items():
             if k in ["success", "spl", "soft_spl", "soft_progress"]:
-                res[k] = v * 100
+                res[k] = round(v * 100, 2)
+            else:
+                res[k] = round(v, 2)
         res_set = None
         for k, v in SETTING_DICT.items():
             if k in f:
