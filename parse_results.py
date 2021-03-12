@@ -13,7 +13,7 @@ from pprint import pprint
 
 SETTING_DICT = {
     "cam_crack_s5": "Camera-Crack",
-    # "clean": "Clean",
+    "clean": "Clean",
     "clean_drift": "Drift",
     "clean_mb_const": "M.B. (C)",
     "clean_mb_stoch": "M.B. (S)",
@@ -71,7 +71,7 @@ def parse_results(search_dir):
                 res[k] = round(v, 2)
         res_set = None
         for k, v in SETTING_DICT.items():
-            if k in f:
+            if k in f and k + "_" not in f:
                 res_set = v
                 break
         if res_set is None:
