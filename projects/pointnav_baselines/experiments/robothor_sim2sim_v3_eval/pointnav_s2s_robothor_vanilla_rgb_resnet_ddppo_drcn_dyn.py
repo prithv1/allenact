@@ -234,7 +234,14 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
         ]
 
     def monkey_patch_env_args(
-        self, motorFail, consTranslate, constRotate, stochTranslate, stochRotate, drift
+        self,
+        motorFail,
+        consTranslate,
+        constRotate,
+        stochTranslate,
+        stochRotate,
+        drift,
+        drift_deg,
     ):
         self.ENV_ARGS["motor_failure"] = motorFail
         self.ENV_ARGS["constTranslate"] = consTranslate
@@ -242,6 +249,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
         self.ENV_ARGS["stochTranslate"] = stochTranslate
         self.ENV_ARGS["stochRotate"] = stochRotate
         self.ENV_ARGS["drift"] = drift
+        self.ENV_ARGS["drift_deg"] = drift_deg
 
     # DD-PPO Base
     # @classmethod

@@ -225,6 +225,15 @@ def get_args():
     )
 
     parser.add_argument(
+        "-dr_deg",
+        "--drift_degrees",
+        default=1.15,
+        type=float,
+        required=False,
+        help="The drift angle by which the agent will rotate for a translation action",
+    )
+
+    parser.add_argument(
         "-trd",
         "--training_dataset",
         default=None,
@@ -439,6 +448,7 @@ def main():
     STOCH_TRANSLATE = args.stoch_translate
     STOCH_ROTATE = args.stoch_rotate
     DRIFT = args.drift
+    DRIFT_DEG = args.drift_degrees
 
     TEST_GPU_IDS = None
     if args.test_gpus is not None:
@@ -474,6 +484,7 @@ def main():
             STOCH_TRANSLATE,
             STOCH_ROTATE,
             DRIFT,
+            DRIFT_DEG,
         )
 
     if args.test_date is None:
