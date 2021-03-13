@@ -84,7 +84,8 @@ def parse_results(search_dir):
     # Convert to dataframe
     data_df = pd.DataFrame(data, index=[INDEX.index(x) for x in df_index])
     data_df = data_df.sort_index(ascending=True)
-    print(data_df[["setting"] + metrics])
+    # print(data_df[["setting"] + metrics])
+    print(data_df[["setting"] + metrics].to_latex())
 
 
 if __name__ == "__main__":
