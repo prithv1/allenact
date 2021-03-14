@@ -285,14 +285,14 @@ def get_teleport_location(
     teleport_state["x"] = (
         curr_state["x"]
         + (translate_amount + translation_noise[0])
-        * math.cos(math.radians(curr_state["rotation"]["y"]))
-        + translation_noise[1] * math.sin(math.radians(curr_state["rotation"]["y"]))
+        * math.sin(math.radians(curr_state["rotation"]["y"]))
+        + translation_noise[1] * math.cos(math.radians(curr_state["rotation"]["y"]))
     )
     teleport_state["z"] = (
         curr_state["z"]
         + (translate_amount + translation_noise[0])
-        * math.sin(math.radians(curr_state["rotation"]["y"]))
-        - translation_noise[1] * math.cos(math.radians(curr_state["rotation"]["y"]))
+        * math.cos(math.radians(curr_state["rotation"]["y"]))
+        - translation_noise[1] * math.sin(math.radians(curr_state["rotation"]["y"]))
     )
     teleport_state["rotation"]["y"] = (
         curr_state["rotation"]["y"] + rotate_amount + rot_noise

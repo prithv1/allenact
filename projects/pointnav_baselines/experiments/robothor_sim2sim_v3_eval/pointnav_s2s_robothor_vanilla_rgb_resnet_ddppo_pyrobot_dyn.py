@@ -72,7 +72,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
         self.STEP_SIZE = 0.25
         self.ROTATION_DEGREES = 30.0
         self.DISTANCE_TO_GOAL = 0.2
-        self.STOCHASTIC = True
+        self.STOCHASTIC = False  # Set to False only for the PyRobot instances
         self.HORIZONTAL_FIELD_OF_VIEW = 79
 
         self.CAMERA_WIDTH = 400  # 640

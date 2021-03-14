@@ -805,6 +805,7 @@ class RoboThorCachedEnvironment:
             "actionReturn"
         ]
 
+    # The step function below seems wrong
     def step(
         self, action_dict: Dict[str, Union[str, int, float]]
     ) -> ai2thor.server.Event:
