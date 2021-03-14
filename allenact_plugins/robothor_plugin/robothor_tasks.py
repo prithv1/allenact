@@ -232,8 +232,16 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     self.env.step(
                         {
                             "action": "Teleport",
-                            "position": teleport_pos,
-                            "rotation": teleport_rot,
+                            "position": dict(
+                                x=teleport_pos["x"],
+                                y=teleport_pos["y"],
+                                z=teleport_pos["z"],
+                            ),
+                            "rotation": dict(
+                                x=teleport_rot["x"],
+                                y=teleport_rot["y"],
+                                z=teleport_rot["z"],
+                            ),
                         }
                     )
                 elif action_str == "RotateLeft":
@@ -258,8 +266,16 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     self.env.step(
                         {
                             "action": "Teleport",
-                            "position": teleport_pos,
-                            "rotation": teleport_rot,
+                            "position": dict(
+                                x=teleport_pos["x"],
+                                y=teleport_pos["y"],
+                                z=teleport_pos["z"],
+                            ),
+                            "rotation": dict(
+                                x=teleport_rot["x"],
+                                y=teleport_rot["y"],
+                                z=teleport_rot["z"],
+                            ),
                         }
                     )
                 elif action_str == "RotateRight":
@@ -284,8 +300,16 @@ class PointNavTask(Task[RoboThorEnvironment]):
                     self.env.step(
                         {
                             "action": "Teleport",
-                            "position": teleport_pos,
-                            "rotation": teleport_rot,
+                            "position": dict(
+                                x=teleport_pos["x"],
+                                y=teleport_pos["y"],
+                                z=teleport_pos["z"],
+                            ),
+                            "rotation": dict(
+                                x=teleport_rot["x"],
+                                y=teleport_rot["y"],
+                                z=teleport_rot["z"],
+                            ),
                         }
                     )
                 else:
