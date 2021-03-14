@@ -3,6 +3,7 @@ from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
+import pyrobot_noise_models as pyrobot
 
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor
@@ -206,7 +207,93 @@ class PointNavTask(Task[RoboThorEnvironment]):
                             {"action": "RotateRight", "degrees": self.env._drift_deg}
                         )
 
-            self.env.step({"action": action_str})
+            if self.env._pyrobot_noise:
+                # Get current agent state
+                curr_state = self.env.agent_state()
+                if action_str == "MoveAhead":
+                    teleport_loc = pyrobot.get_teleport_location(
+                        curr_state,
+                        self.env.move_step,
+                        0.0,
+                        self.env._pyrobot_noise_multiplier,
+                        pyrobot_noise_models[self.env._pyrobot_rob_spec][
+                            self.env._pyrobot_controller_spec
+                        ].linear_motion,
+                        "linear",
+                    )
+                    teleport_pos = {
+                        k: v for k, v in teleport_loc.items() if k in ["x", "y", "z"]
+                    }
+                    teleport_rot = {
+                        k: v
+                        for k, v in teleport_loc["rotation"].items()
+                        if k in ["x", "y", "z"]
+                    }
+                    self.env.step(
+                        {
+                            "action": "Teleport",
+                            "position": teleport_pos,
+                            "rotation": teleport_rot,
+                        }
+                    )
+                elif action_str == "RotateLeft":
+                    teleport_loc = pyrobot.get_teleport_location(
+                        curr_state,
+                        0.0,
+                        -self.env.rot_step,
+                        self.env._pyrobot_noise_multiplier,
+                        pyrobot_noise_models[self.env._pyrobot_rob_spec][
+                            self.env._pyrobot_controller_spec
+                        ].rotational_motion,
+                        "rotational",
+                    )
+                    teleport_pos = {
+                        k: v for k, v in teleport_loc.items() if k in ["x", "y", "z"]
+                    }
+                    teleport_rot = {
+                        k: v
+                        for k, v in teleport_loc["rotation"].items()
+                        if k in ["x", "y", "z"]
+                    }
+                    self.env.step(
+                        {
+                            "action": "Teleport",
+                            "position": teleport_pos,
+                            "rotation": teleport_rot,
+                        }
+                    )
+                elif action_str == "RotateRight":
+                    teleport_loc = pyrobot.get_teleport_location(
+                        curr_state,
+                        0.0,
+                        self.env.rot_step,
+                        self.env._pyrobot_noise_multiplier,
+                        pyrobot_noise_models[self.env._pyrobot_rob_spec][
+                            self.env._pyrobot_controller_spec
+                        ].rotational_motion,
+                        "rotational",
+                    )
+                    teleport_pos = {
+                        k: v for k, v in teleport_loc.items() if k in ["x", "y", "z"]
+                    }
+                    teleport_rot = {
+                        k: v
+                        for k, v in teleport_loc["rotation"].items()
+                        if k in ["x", "y", "z"]
+                    }
+                    self.env.step(
+                        {
+                            "action": "Teleport",
+                            "position": teleport_pos,
+                            "rotation": teleport_rot,
+                        }
+                    )
+                else:
+                    self.env.step({"action": action_str})
+            else:
+                self.env.step({"action": action_str})
+
+            # self.env.step({"action": action_str}) # Old action_str call
             self.last_action_success = self.env.last_action_success
             self.task_info["action_success"].append(self.last_action_success)
             pose = self.env.agent_state()

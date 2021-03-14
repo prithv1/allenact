@@ -64,6 +64,11 @@ class RoboThorEnvironment:
         self._dreckon = f(kwargs, "dead_reckoning", False)
         print("Dead Reckoning Mode is ", self._dreckon)
 
+        self._pyrobot_noise = f(kwargs, "pyrobot_noise_model", False)
+        self._pyrobot_rob_spec = f(kwargs, "pyrobot_robot_spec", None)
+        self._pyrobot_controller_spec = f(kwargs, "pyrobot_controller_spec", None)
+        self._pyrobot_noise_multiplier = f(kwargs, "pyrobot_noise_multiplier", None)
+
         self._drift_dir = None
 
         self._drift_deg = f(kwargs, "drift_deg", 1.15)  # Hardcoded
