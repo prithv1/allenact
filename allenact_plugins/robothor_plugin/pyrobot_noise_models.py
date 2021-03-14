@@ -21,7 +21,8 @@ from typing import List, Optional, Sequence, Tuple, Union, cast, Dict
 import attr
 import copy
 import math
-import magnum as mn
+
+# import magnum as mn
 import numpy as np
 import scipy.stats
 from numpy import float64, ndarray
