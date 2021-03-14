@@ -171,7 +171,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
             renderDepthImage=False,
             pyrobot_noise_model=True,
             pyrobot_robot_spec="LoCoBot",
-            pyrobot_controller_spec="Proportional",
+            pyrobot_controller_spec="ILQR",
             pyrobot_noise_multiplier=1.0,
         )
 
