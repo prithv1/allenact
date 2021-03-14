@@ -244,16 +244,16 @@ class PointNavTask(Task[RoboThorEnvironment]):
                             ),
                         }
                     )
-                    print(
-                        "Action",
-                        action_str,
-                        "Curr State",
-                        curr_state,
-                        "Intended State",
-                        teleport_loc,
-                        "Resulting State",
-                        self.env.agent_state(),
-                    )
+                    # print(
+                    #     "Action",
+                    #     action_str,
+                    #     "Curr State",
+                    #     curr_state,
+                    #     "Intended State",
+                    #     teleport_loc,
+                    #     "Resulting State",
+                    #     self.env.agent_state(),
+                    # )
                 elif action_str == "RotateLeft":
                     teleport_loc = pyrobot.get_teleport_location(
                         curr_state,
@@ -288,16 +288,16 @@ class PointNavTask(Task[RoboThorEnvironment]):
                             ),
                         }
                     )
-                    print(
-                        "Action",
-                        action_str,
-                        "Curr State",
-                        curr_state,
-                        "Intended State",
-                        teleport_loc,
-                        "Resulting State",
-                        self.env.agent_state(),
-                    )
+                    # print(
+                    #     "Action",
+                    #     action_str,
+                    #     "Curr State",
+                    #     curr_state,
+                    #     "Intended State",
+                    #     teleport_loc,
+                    #     "Resulting State",
+                    #     self.env.agent_state(),
+                    # )
                 elif action_str == "RotateRight":
                     teleport_loc = pyrobot.get_teleport_location(
                         curr_state,
@@ -332,16 +332,16 @@ class PointNavTask(Task[RoboThorEnvironment]):
                             ),
                         }
                     )
-                    print(
-                        "Action",
-                        action_str,
-                        "Curr State",
-                        curr_state,
-                        "Intended State",
-                        teleport_loc,
-                        "Resulting State",
-                        self.env.agent_state(),
-                    )
+                    # print(
+                    #     "Action",
+                    #     action_str,
+                    #     "Curr State",
+                    #     curr_state,
+                    #     "Intended State",
+                    #     teleport_loc,
+                    #     "Resulting State",
+                    #     self.env.agent_state(),
+                    # )
                 else:
                     self.env.step({"action": action_str})
             else:
