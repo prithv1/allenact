@@ -89,9 +89,9 @@ class MotionNoiseModel:
 class ControllerNoiseModel:
     # linear_motion: MotionNoiseModel
     # rotational_motion: MotionNoiseModel
-    def __init__(self, linear_motion, rotation_motion):
+    def __init__(self, linear_motion, rotational_motion):
         self.linear_motion = linear_motion
-        self.rotation_motion = rotation_motion
+        self.rotational_motion = rotational_motion
 
 
 class RobotNoiseModel:
