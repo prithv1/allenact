@@ -211,7 +211,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                 # Get current agent state
                 curr_state = self.env.agent_state()
                 if action_str == "MoveAhead":
-                    teleport_loc, rot_sign = pyrobot.get_teleport_location(
+                    teleport_loc, rot_sign, rot_degrees = pyrobot.get_teleport_location(
                         curr_state,
                         self.env.move_step,
                         0.0,
@@ -248,18 +248,13 @@ class PointNavTask(Task[RoboThorEnvironment]):
                         rot_action = "RotateLeft"
 
                     self.env.step(
-                        {
-                            "action": rot_action,
-                            "degrees": teleport_rot["y"] - curr_state["rotation"]["y"],
-                        }
+                        {"action": rot_action, "degrees": rot_degrees,}
                     )
                     print(
-                        action_str,
-                        rot_action,
-                        teleport_rot["y"] - curr_state["rotation"]["y"],
+                        action_str, rot_action, rot_degrees,
                     )
                 elif action_str == "RotateLeft":
-                    teleport_loc, rot_sign = pyrobot.get_teleport_location(
+                    teleport_loc, rot_sign, rot_degrees = pyrobot.get_teleport_location(
                         curr_state,
                         0.0,
                         -self.env.rot_step,
@@ -296,18 +291,13 @@ class PointNavTask(Task[RoboThorEnvironment]):
                         rot_action = "RotateLeft"
 
                     self.env.step(
-                        {
-                            "action": rot_action,
-                            "degrees": teleport_rot["y"] - curr_state["rotation"]["y"],
-                        }
+                        {"action": rot_action, "degrees": rot_degrees,}
                     )
                     print(
-                        action_str,
-                        rot_action,
-                        teleport_rot["y"] - curr_state["rotation"]["y"],
+                        action_str, rot_action, rot_degrees,
                     )
                 elif action_str == "RotateRight":
-                    teleport_loc, rot_sign = pyrobot.get_teleport_location(
+                    teleport_loc, rot_sign, rot_degrees = pyrobot.get_teleport_location(
                         curr_state,
                         0.0,
                         self.env.rot_step,
@@ -344,15 +334,10 @@ class PointNavTask(Task[RoboThorEnvironment]):
                         rot_action = "RotateLeft"
 
                     self.env.step(
-                        {
-                            "action": rot_action,
-                            "degrees": teleport_rot["y"] - curr_state["rotation"]["y"],
-                        }
+                        {"action": rot_action, "degrees": rot_degrees,}
                     )
                     print(
-                        action_str,
-                        rot_action,
-                        teleport_rot["y"] - curr_state["rotation"]["y"],
+                        action_str, rot_action, rot_degrees,
                     )
                 else:
                     self.env.step({"action": action_str})
