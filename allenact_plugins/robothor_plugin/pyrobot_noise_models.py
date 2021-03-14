@@ -33,8 +33,13 @@ from numpy import float64, ndarray
 
 
 class _TruncatedMultivariateGaussian:
-    mean: Union[np.ndarray, Sequence[float]]
-    cov: Union[np.ndarray, Sequence[float]]
+    def __init__(
+        self,
+        mean: Union[np.ndarray, Sequence[float]],
+        cov: Union[np.ndarray, Sequence[float]],
+    ):
+        self.mean = mean
+        self.cov = cov
 
     def __attrs_post_init__(self):
         self.mean = np.array(self.mean)
