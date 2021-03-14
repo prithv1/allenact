@@ -3,7 +3,7 @@ from typing import Tuple, List, Dict, Any, Optional, Union, Sequence, cast
 
 import gym
 import numpy as np
-import pyrobot_noise_models as pyrobot
+import allenact_plugins.robothor_plugin.pyrobot_noise_models as pyrobot
 
 from allenact.base_abstractions.misc import RLStepResult
 from allenact.base_abstractions.sensor import Sensor
