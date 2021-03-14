@@ -33,11 +33,10 @@ from numpy import float64, ndarray
 
 
 class _TruncatedMultivariateGaussian:
-    def __init__(
-        self,
-        mean: Union[np.ndarray, Sequence[float]],
-        cov: Union[np.ndarray, Sequence[float]],
-    ):
+    # mean: Union[np.ndarray, Sequence[float]]
+    # cov: Union[np.ndarray, Sequence[float]]
+
+    def __init__(self, mean, cov):
         self.mean = mean
         self.cov = cov
 
@@ -80,19 +79,30 @@ class _TruncatedMultivariateGaussian:
 
 
 class MotionNoiseModel:
-    linear: _TruncatedMultivariateGaussian
-    rotation: _TruncatedMultivariateGaussian
+    # linear: _TruncatedMultivariateGaussian
+    # rotation: _TruncatedMultivariateGaussian
+    def __init__(self, linear, rotation):
+        self.linear = linear
+        self.rotation = rotation
 
 
 class ControllerNoiseModel:
-    linear_motion: MotionNoiseModel
-    rotational_motion: MotionNoiseModel
+    # linear_motion: MotionNoiseModel
+    # rotational_motion: MotionNoiseModel
+    def __init__(self, linear_motion, rotation_motion):
+        self.linear_motion = linear_motion
+        self.rotation_motion = rotation_motion
 
 
 class RobotNoiseModel:
-    ILQR: ControllerNoiseModel
-    Proportional: ControllerNoiseModel
-    Movebase: ControllerNoiseModel
+    # ILQR: ControllerNoiseModel
+    # Proportional: ControllerNoiseModel
+    # Movebase: ControllerNoiseModel
+
+    def __init__(self, ILQR, Proportional, Movebase):
+        self.ILQR = ILQR
+        self.Proportional = Proportional
+        self.Movebase = Movebase
 
     def __getitem__(self, key: str) -> ControllerNoiseModel:
         return getattr(self, key)
