@@ -295,7 +295,7 @@ def get_teleport_location(
         - translation_noise[1] * math.sin(math.radians(curr_state["rotation"]["y"]))
     )
     teleport_state["rotation"]["y"] = (
-        curr_state["rotation"]["y"] + rotate_amount + rot_noise
+        curr_state["rotation"]["y"] + rotate_amount + rot_noise[0]
     ) % 360.0
 
     return teleport_state
