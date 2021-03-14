@@ -216,7 +216,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                         self.env.move_step,
                         0.0,
                         self.env._pyrobot_noise_multiplier,
-                        pyrobot_noise_models[self.env._pyrobot_rob_spec][
+                        pyrobot.pyrobot_noise_models[self.env._pyrobot_rob_spec][
                             self.env._pyrobot_controller_spec
                         ].linear_motion,
                         "linear",
@@ -242,7 +242,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                         0.0,
                         -self.env.rot_step,
                         self.env._pyrobot_noise_multiplier,
-                        pyrobot_noise_models[self.env._pyrobot_rob_spec][
+                        pyrobot.pyrobot_noise_models[self.env._pyrobot_rob_spec][
                             self.env._pyrobot_controller_spec
                         ].rotational_motion,
                         "rotational",
@@ -268,7 +268,7 @@ class PointNavTask(Task[RoboThorEnvironment]):
                         0.0,
                         self.env.rot_step,
                         self.env._pyrobot_noise_multiplier,
-                        pyrobot_noise_models[self.env._pyrobot_rob_spec][
+                        pyrobot.pyrobot_noise_models[self.env._pyrobot_rob_spec][
                             self.env._pyrobot_controller_spec
                         ].rotational_motion,
                         "rotational",
