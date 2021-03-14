@@ -176,39 +176,39 @@ pyrobot_noise_models = {
 }
 
 
-class PyRobotNoisyActuationSpec(ActuationSpec):
-    r"""Struct to hold parameters for pyrobot noise model
+# class PyRobotNoisyActuationSpec(ActuationSpec):
+#     r"""Struct to hold parameters for pyrobot noise model
 
-    :property robot: Which robot to simulate noise for. Valid values are
-        ``LoCoBot`` and ``LoCoBot-Lite``.
-    :property controller: Which controller to simulate noise models for. Valid
-        values are ``ILQR``, ``Proportional``; ``Movebase ILQR`` is the
-        default.
-    :property noise_multiplier: Multiplier on the noise amount, useful for
-        ablating the effect of noise.
+#     :property robot: Which robot to simulate noise for. Valid values are
+#         ``LoCoBot`` and ``LoCoBot-Lite``.
+#     :property controller: Which controller to simulate noise models for. Valid
+#         values are ``ILQR``, ``Proportional``; ``Movebase ILQR`` is the
+#         default.
+#     :property noise_multiplier: Multiplier on the noise amount, useful for
+#         ablating the effect of noise.
 
-    -   https://pyrobot.org/
-    -   https://github.com/facebookresearch/pyrobot
+#     -   https://pyrobot.org/
+#     -   https://github.com/facebookresearch/pyrobot
 
-    Please cite PyRobot if you use this noise model.
-    """
-    robot: str = attr.ib(default="LoCoBot")
+#     Please cite PyRobot if you use this noise model.
+#     """
+#     robot: str = attr.ib(default="LoCoBot")
 
-    @robot.validator  # noqa: F811
-    def check_robot(self, attribute: Attribute, value: str) -> None:
-        assert value in pyrobot_noise_models.keys(), f"{value} not a known robot"
+#     @robot.validator  # noqa: F811
+#     def check_robot(self, attribute: Attribute, value: str) -> None:
+#         assert value in pyrobot_noise_models.keys(), f"{value} not a known robot"
 
-    controller: str = attr.ib(default="ILQR")
+#     controller: str = attr.ib(default="ILQR")
 
-    @controller.validator  # noqa: F811
-    def check_controller(self, attribute: Attribute, value: str) -> None:
-        assert value in [
-            "ILQR",
-            "Proportional",
-            "Movebase",
-        ], f"{value} not a known controller"
+#     @controller.validator  # noqa: F811
+#     def check_controller(self, attribute: Attribute, value: str) -> None:
+#         assert value in [
+#             "ILQR",
+#             "Proportional",
+#             "Movebase",
+#         ], f"{value} not a known controller"
 
-    noise_multiplier: float = 1.0
+#     noise_multiplier: float = 1.0
 
 
 _X_AXIS = 0
