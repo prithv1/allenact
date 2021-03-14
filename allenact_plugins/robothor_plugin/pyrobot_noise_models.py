@@ -60,8 +60,9 @@ class _TruncatedMultivariateGaussian:
             assert len(truncation) == len(self.mean)
 
         sample = np.zeros_like(self.mean)
+        print("Mean", self.mean)
+        print("Cov", self.cov)
         for i in range(len(self.mean)):
-            print(self.cov)
             stdev = np.sqrt(cast(np.ndarray, self.cov)[i, i])
             mean = self.mean[i]
             # Always truncate to 3 standard deviations
