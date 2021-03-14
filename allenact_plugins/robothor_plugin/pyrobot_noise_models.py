@@ -300,8 +300,9 @@ def get_teleport_location(
 
     # Also return the rotation sign
     rot_sign = np.sign(rotate_amount + rot_noise)
+    rot_degrees = rotate_amount + rot_noise
 
-    return teleport_state, rot_sign
+    return teleport_state, rot_sign, rot_degrees
 
 
 # @registry.register_move_fn(body_action=True)
