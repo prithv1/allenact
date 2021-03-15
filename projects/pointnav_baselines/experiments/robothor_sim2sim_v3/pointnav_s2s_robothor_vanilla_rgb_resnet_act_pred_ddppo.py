@@ -56,6 +56,7 @@ from allenact.algorithms.onpolicy_sync.losses.action_pred import ActPredConfig
 from projects.pointnav_baselines.models.point_nav_models import (
     PointNavActorCriticSimpleConvRNN,
     ResnetTensorPointNavActorCritic,
+    ResnetTensorAuxPointNavActorCritic,
 )
 
 from allenact.base_abstractions.sensor import DepthSensor, RGBSensor
@@ -278,7 +279,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
         # depth_uuid = "depth_resnet"
         goal_sensor_uuid = "target_coordinates_ind"
 
-        return ResnetTensorPointNavActorCritic(
+        return ResnetTensorAuxPointNavActorCritic(
             action_space=gym.spaces.Discrete(len(PointNavTask.class_action_names())),
             observation_space=kwargs["sensor_preprocessor_graph"].observation_spaces,
             goal_sensor_uuid=goal_sensor_uuid,
@@ -286,6 +287,8 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
             # depth_uuid=depth_uuid,
             hidden_size=512,
             goal_dims=32,
+            aux_mode=True,
+            inv_mode=True,
         )
 
     def machine_params(self, mode="train", **kwargs):
