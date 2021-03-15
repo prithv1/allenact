@@ -239,6 +239,9 @@ class ResnetTensorAuxPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
         if self.rot_mode and self.aux_mode:
             self.rotation_model = RotationModel(self.goal_visual_encoder.output_dims)
 
+        self.train()
+        self.memory_key = "rnn"
+
     @property
     def recurrent_hidden_state_size(self) -> int:
         """The recurrent hidden state size of the model."""
