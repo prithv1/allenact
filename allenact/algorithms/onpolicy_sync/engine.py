@@ -904,7 +904,12 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     ]
 
                 pred_rotation_logits = None
-                if self.sep_rot_mode:
+                # if self.sep_rot_mode:
+                #     pred_rotation_logits = actor_critic_output.extras[
+                #         "pred_rotation_logits"
+                #     ]
+
+                if self.rot_mode:
                     pred_rotation_logits = actor_critic_output.extras[
                         "pred_rotation_logits"
                     ]
