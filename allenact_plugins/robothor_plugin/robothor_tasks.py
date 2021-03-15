@@ -370,6 +370,19 @@ class PointNavTask(Task[RoboThorEnvironment]):
         )
         return step_result
 
+    def get_observations(
+        self, **kwargs
+    ) -> Any:  # Functional interface required for rotation-prediction
+        obs = self.sensor_suite.get_observations(env=self.env, task=self, **kwargs)
+        rgb_uuid = [k for k, v in obs.items() if "rgb" in k][0]
+        if len(obs[rgb_uuid]) == 2:  # Rotation Prediction Mode
+            rot_label_uuid = [k for k, v in obs.items() if "rot_label" in k][0]
+            rgb_obs = obs[rgb_uuid][0]
+            rot_label = obs[rgb_uuid][1]
+            obs[rgb_uuid] = rgb_obs
+            obs[rot_label_uuid] = rot_label
+        return obs
+
     def render(self, mode: str = "rgb", *args, **kwargs) -> np.ndarray:
         assert mode in ["rgb", "depth"], "only rgb and depth rendering is implemented"
         if mode == "rgb":

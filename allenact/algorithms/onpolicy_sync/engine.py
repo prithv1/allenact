@@ -231,12 +231,19 @@ class OnPolicyRLEngine(object):
             self.inv_mode = False
             print("Actor critic model has no attribute inverse mode")
 
-        # Separate Rotation Prediction Mode
+        # # Separate Rotation Prediction Mode
+        # try:
+        #     self.sep_rot_mode = self.actor_critic.sep_rot_mode
+        # except AttributeError:
+        #     self.sep_rot_mode = False
+        #     print("Actor critic model has no attribute separate rotation mode")
+
+        # Rotation Prediction Mode
         try:
-            self.sep_rot_mode = self.actor_critic.sep_rot_mode
+            self.rot_mode = self.actor_critic.rot_mode
         except AttributeError:
-            self.sep_rot_mode = False
-            print("Actor critic model has no attribute separate rotation mode")
+            self.rot_mode = False
+            print("Actor critic model has no attribute rotation mode")
 
     @property
     def vector_tasks(self) -> VectorSampledTasks:

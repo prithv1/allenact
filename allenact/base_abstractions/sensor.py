@@ -273,6 +273,20 @@ class ExpertPolicySensor(Sensor[EnvType, SubTaskType]):
         )
 
 
+class RotationSensor(Sensor[EnvType, SubTaskType]):
+    def __init__(self, uuid: str = "rot_label", **kwargs: Any):
+        observation_space = self._get_observation_space()
+        super().__init__(**prepare_locals_for_super(locals()))
+
+    def _get_observation_space(self) -> gym.spaces.Discrete:
+        return gym.spaces.Discrete(4)
+
+    def get_observation(
+        self, env: EnvType, task: SubTaskType, *args: Any, **kwargs: Any
+    ) -> Any:
+        return 0
+
+
 class VisionSensor(Sensor[EnvType, SubTaskType]):
     def __init__(
         self,
@@ -330,7 +344,8 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         print("Random Translate ", self._tshift)
 
         # Whether to rotate the input observation or not
-        self._sep_rotate: bool = f(kwargs, "sep_rotate", False)
+        # self._sep_rotate: bool = f(kwargs, "sep_rotate", False)
+        self._rotate: bool = f(kwargs, "rotate", False)
 
         self._norm_means = mean
         self._norm_sds = stdev
@@ -497,7 +512,12 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         if self._sep_rotate:
             rot_im = copy.deepcopy(im)
 
-        if self._sep_rotate:
+        # if self._sep_rotate:
+        #     if not isinstance(rot_im, np.ndarray):
+        #         rot_im = np.array(im)
+        #     rot_im, rot_label = degradations.rotate_single(rot_im)
+
+        if self._rotate:
             if not isinstance(rot_im, np.ndarray):
                 rot_im = np.array(im)
             rot_im, rot_label = degradations.rotate_single(rot_im)
@@ -511,7 +531,16 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             if self.scaler is not None and shape_condition:
                 im = np.array(self.scaler(im), dtype=np.uint8)  # hwc
 
-            if self._sep_rotate:
+            # if self._sep_rotate:
+            #     if not isinstance(rot_im, np.ndarray):
+            #         shape_condition = rot_im.size[:2] != (self._height, self._width)
+            #     else:
+            #         shape_condition = rot_im.shape[:2] != (self._height, self._width)
+            #         rot_im = self.to_pil(rot_im)
+            #     if self.scaler is not None and shape_condition:
+            #         rot_im = np.array(self.scaler(rot_im), dtype=np.uint8)  # hwc
+
+            if self._rotate:
                 if not isinstance(rot_im, np.ndarray):
                     shape_condition = rot_im.size[:2] != (self._height, self._width)
                 else:
@@ -530,7 +559,11 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
         if im.dtype == np.uint8:
             im = im.astype(np.float32) / 255.0
 
-        if self._sep_rotate:
+        # if self._sep_rotate:
+        #     if rot_im.dtype == np.uint8:
+        #         rot_im = rot_im.astype(np.float32) / 255.0
+
+        if self._rotate:
             if rot_im.dtype == np.uint8:
                 rot_im = rot_im.astype(np.float32) / 255.0
 
@@ -538,7 +571,12 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             im -= self._norm_means
             im /= self._norm_sds
 
-        if self._sep_rotate:
+        # if self._sep_rotate:
+        #     if self._should_normalize:
+        #         rot_im -= self._norm_means
+        #         rot_im /= self._norm_sds
+
+        if self._rotate:
             if self._should_normalize:
                 rot_im -= self._norm_means
                 rot_im /= self._norm_sds
@@ -547,7 +585,16 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
             if self.scaler is not None and im.shape[:2] != (self._height, self._width):
                 im = np.array(self.scaler(self.to_pil(im)), dtype=np.float32)  # hwc
 
-            if self._sep_rotate:
+            # if self._sep_rotate:
+            #     if self.scaler is not None and rot_im.shape[:2] != (
+            #         self._height,
+            #         self._width,
+            #     ):
+            #         rot_im = np.array(
+            #             self.scaler(self.to_pil(rot_im)), dtype=np.float32
+            #         )  # hwc
+
+            if self._rotate:
                 if self.scaler is not None and rot_im.shape[:2] != (
                     self._height,
                     self._width,
@@ -556,8 +603,10 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
                         self.scaler(self.to_pil(rot_im)), dtype=np.float32
                     )  # hwc
 
-        if self._sep_rotate:
-            return (im, rot_im, rot_label)
+        # if self._sep_rotate:
+        #     return (im, rot_im, rot_label)
+        if self._rotate:
+            return (rot_im, rot_label)
         else:
             return im
 
