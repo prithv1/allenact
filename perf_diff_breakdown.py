@@ -84,7 +84,8 @@ def parse_results(search_dir):
     mean_df = data_df.groupby(["setting", "difficulty"], as_index=False)[
         [metrics]
     ].mean()
-    print(mean_df[["setting", "difficulty"] + metrics])
+    print(mean_df)
+    # print(mean_df[["setting", "difficulty"] + metrics])
 
 
 if __name__ == "__main__":
