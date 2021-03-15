@@ -261,7 +261,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
             advance_scene_rollout_period=self.ADVANCE_SCENE_ROLLOUT_PERIOD,
             pipeline_stages=[
                 PipelineStage(
-                    loss_names=["ppo_loss"],
+                    loss_names=["ppo_loss", "act_pred_loss"],
                     max_stage_steps=ppo_steps,
                     loss_weights=[1.0, 0.001],
                 )
