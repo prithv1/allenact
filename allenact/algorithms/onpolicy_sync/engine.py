@@ -224,6 +224,20 @@ class OnPolicyRLEngine(object):
         # Keeping track of metrics during training/inference
         self.single_process_metrics_queue: queue.Queue = queue.Queue()
 
+        # Inverse Dynamics Mode
+        try:
+            self.inv_mode = self.actor_critic.inv_mode
+        except AttributeError:
+            self.inv_mode = False
+            print("Actor critic model has no attribute inverse mode")
+
+        # Separate Rotation Prediction Mode
+        try:
+            self.sep_rot_mode = self.actor_critic.sep_rot_mode
+        except AttributeError:
+            self.sep_rot_mode = False
+            print("Actor critic model has no attribute separate rotation mode")
+
     @property
     def vector_tasks(self) -> VectorSampledTasks:
         if self._vector_tasks is None and self.num_samplers > 0:
