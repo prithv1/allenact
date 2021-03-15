@@ -876,6 +876,18 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                     masks=batch["masks"],
                 )
 
+                pred_action_logits = None
+                if self.inv_mode:
+                    pred_action_logits = actor_critic_output.extras[
+                        "pred_action_logits"
+                    ]
+
+                pred_rotation_logits = None
+                if self.sep_rot_mode:
+                    pred_rotation_logits = actor_critic_output.extras[
+                        "pred_rotation_logits"
+                    ]
+
                 info: Dict[str, float] = {}
 
                 total_loss: Optional[torch.Tensor] = None
@@ -889,6 +901,8 @@ class OnPolicyTrainer(OnPolicyRLEngine):
                         step_count=self.step_count,
                         batch=batch,
                         actor_critic_output=actor_critic_output,
+                        pred_action_logits=pred_action_logits,
+                        pred_rotation_logits=pred_rotation_logits,
                     )
                     if total_loss is None:
                         total_loss = loss_weight * current_loss
