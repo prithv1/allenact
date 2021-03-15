@@ -299,7 +299,7 @@ class ResnetTensorAuxPointNavActorCritic(ActorCriticModel[CategoricalDistr]):
 
         return (
             ActorCriticOutput(
-                distributions=self.actor(obs_enciding),
+                distributions=self.actor(obs_encoding),
                 values=self.critic(obs_encoding),
                 extras={
                     "pred_action_logits": action_logits,
