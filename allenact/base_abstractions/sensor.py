@@ -509,7 +509,10 @@ class VisionSensor(Sensor[EnvType, SubTaskType]):
                 im = self.to_pil(im)
             im = self._color_jitter(im)
 
-        if self._sep_rotate:
+        # if self._sep_rotate:
+        #     rot_im = copy.deepcopy(im)
+
+        if self._rotate:
             rot_im = copy.deepcopy(im)
 
         # if self._sep_rotate:
