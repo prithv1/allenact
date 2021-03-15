@@ -75,7 +75,7 @@ def parse_results(search_dir):
             res_set = "Clean"
         for task in res["tasks"]:
             task_dict = {k: v for k, v in res.items() if k in metrics}
-            task_dict["success"] = int(task_dict["success"] == "true")
+            task_dict["success"] = float(task_dict["success"] == "true")
             task_dict["difficulty"] = task["task_info"]["difficulty"]
             task_dict["setting"] = res_set
             data.append(task_dict)
