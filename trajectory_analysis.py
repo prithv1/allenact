@@ -152,7 +152,8 @@ def stop_fail_neg(data_df):
     Number of times the agent fails to invoke an end action
     when the goal is in range
     """
-    sub_df = data_df[["setting", "success", "taken_actions", "goal_in_range"]]
+    sub_df = data_df[data_df.apply(lambda x: True in x["goal_in_range"], axis=1)]
+    sub_df = sub_df[["setting", "success", "taken_actions", "goal_in_range"]]
     sub_df["stop_fail_neg"] = sub_df.apply(
         lambda x: goal_in_range_not_took_end(x), axis=1
     )
