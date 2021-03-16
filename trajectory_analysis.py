@@ -131,9 +131,9 @@ def stop_fail_pos(data_df):
     sub_df = data_df[data_df["took_end_action"] == True]
     sub_df = sub_df[["setting", "success", "taken_actions", "goal_in_range"]]
     sub_df["stop_fail_pos"] = sub_df.apply(lambda x: goal_out_range_took_end(x), axis=1)
-    stop_fail_pos_df = (
-        sub_df.groupby(["setting"], as_index=False)["stop_fail_pos"].mean().round(2)
-    )
+    stop_fail_pos_df = sub_df.groupby(["setting"], as_index=False)[
+        "stop_fail_pos"
+    ].mean()
     print(stop_fail_pos_df[["setting", "stop_fail_pos"]])
 
 
