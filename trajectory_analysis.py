@@ -163,6 +163,22 @@ def stop_fail_neg(data_df):
     print(stop_fail_neg_df[["setting", "stop_fail_neg"]])
 
 
+def succ_diff(x):
+    goal_in_range = x["goal_in_range"]
+    oracle_success = any(goal_in_range)
+    return oracle_success - float(x["success"] == True)
+
+
+def success_impact(data_df):
+    """
+    Get oracle - regular success rate
+    """
+    sub_df = data_df[["setting", "success", "taken_actions", "goal_in_range"]]
+    sub_df["succ_diff"] = sub_df.apply(lambda x: succ_diff(x), axis=1)
+    succ_diff_df = sub_df.groupby(["setting"], as_index=False)["succ_diff"].mean()
+    print(succ_diff_df[["setting", "succ_diff"]])
+
+
 # def get_hist(x):
 #     hist, bins = np.histogram(x[""])
 
@@ -205,4 +221,5 @@ if __name__ == "__main__":
     # collision_stat(data_df)
     # min_dist_stat(data_df)
     # stop_fail_pos(data_df)
-    stop_fail_neg(data_df)
+    # stop_fail_neg(data_df)
+    success_impact(data_df)
