@@ -133,7 +133,7 @@ def stop_fail_pos(data_df):
     sub_df["stop_fail_pos"] = sub_df.apply(lambda x: goal_out_range_took_end(x), axis=1)
     stop_fail_pos_df = sub_df.groupby(["setting"], as_index=False)[
         "stop_fail_pos"
-    ].mean()
+    ].sum()
     print(stop_fail_pos_df[["setting", "stop_fail_pos"]])
 
 
