@@ -80,7 +80,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
         self.CAMERA_WIDTH = 400  # 640
         self.CAMERA_HEIGHT = 300  # 480
         self.SCREEN_SIZE = 224
-        self.MAX_STEPS = 300 #500
+        self.MAX_STEPS = 300  # 500
 
         # Random crop specifications for data augmentations
         self.CROP_WIDTH = 320  # 512 (for 640)
@@ -221,7 +221,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
                 crop_height=self.CROP_HEIGHT,
                 crop_width=self.CROP_WIDTH,
                 color_jitter=color_jitter,
-                rotate=True,
+                # rotate=True,
             ),
             # DepthSensorThor(
             #     height=self.SCREEN_SIZE,
