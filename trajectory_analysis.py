@@ -78,7 +78,7 @@ def parse_results_to_df(search_dir):
             res_set = "Clean"
         for task in res["tasks"]:
             task_dict = {k: v for k, v in task.items() if k != "task_info"}
-            for k, v in task["task_info"]:
+            for k, v in task["task_info"].items():
                 task_dict[k] = v
             task_dict["setting"] = res_set
             data.append(task_dict)
