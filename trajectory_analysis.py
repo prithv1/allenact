@@ -101,6 +101,18 @@ def collision_stat(data_df):
     print(mean_collision_df[["setting", "collisions"]])
 
 
+# Minimum distance to target
+# Supposed to indicate the closest the agent arrives to the target
+def min_dist_stat(data_df):
+    # Try a global approach
+    sub_df = data_df[["setting", "far_from_goal"]]
+    sub_df["min_dist"] = sub_df["far_from_goal"].apply(lambda x: np.min(x))
+    min_dist_df = (
+        sub_df.groupby(["setting"], as_index=False)["min_dist"].mean().round(2)
+    )
+    print(mean_dist_df[["setting", "min_dist"]])
+
+
 if __name__ == "__main__":
     RES_DIR = {
         "pnav_rgb": "storage/robothor-pointnav-rgb-resnetgru-dppo-s2s-eval/metrics/Pointnav-RoboTHOR-Vanilla-RGB-ResNet-DDPPO",
@@ -128,4 +140,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     data_df, data = parse_results_to_df(RES_DIR[args.mode])
 
-    collision_stat(data_df)
+    # collision_stat(data_df)
+    min_dist_stat(data_df)
