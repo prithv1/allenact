@@ -92,13 +92,11 @@ def parse_results_to_df(search_dir):
 def collision_stat(data_df):
     # Try a global approach
     sub_df = data_df[["setting", "action_success"]]
-    sub_df["action_success"] = sub_df["action_success"].apply(
-        lambda x: 1.0 - np.mean(x)
+    sub_df["collisions"] = sub_df["action_success"].apply(
+        lambda x: 100.0 * (1.0 - np.mean(x))
     )
-    mean_collision_df = sub_df.groupby(["setting"], as_index=False)[
-        "action_success"
-    ].mean()
-    print(mean_collision_df)
+    mean_collision_df = sub_df.groupby(["setting"], as_index=False)["collisions"].mean()
+    print(mean_collision_df[["setting", "collisions"]])
 
 
 if __name__ == "__main__":
