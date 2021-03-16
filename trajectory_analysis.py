@@ -95,7 +95,7 @@ def collision_stat(data_df):
     sub_df["collisions"] = sub_df["action_success"].apply(
         lambda x: (len(x) - np.sum(x))
     )
-    mean_collision_df = sub_df.groupby(["setting"], as_index=False)["collisions"].sum()
+    mean_collision_df = sub_df.groupby(["setting"], as_index=False)["collisions"].mean()
     print(mean_collision_df[["setting", "collisions"]])
 
 
