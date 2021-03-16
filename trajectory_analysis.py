@@ -110,7 +110,7 @@ def min_dist_stat(data_df):
     min_dist_df = (
         sub_df.groupby(["setting"], as_index=False)["min_dist"].mean().round(2)
     )
-    print(mean_dist_df[["setting", "min_dist"]])
+    print(min_dist_df[["setting", "min_dist"]])
 
 
 if __name__ == "__main__":
