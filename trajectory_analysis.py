@@ -166,7 +166,7 @@ def stop_fail_neg(data_df):
 def succ_diff(x):
     goal_in_range = x["goal_in_range"]
     oracle_success = any(goal_in_range)
-    return oracle_success - float(x["success"] == True)
+    return 100 * (oracle_success - float(x["success"] == True))
 
 
 def success_impact(data_df):
