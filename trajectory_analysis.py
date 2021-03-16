@@ -137,12 +137,29 @@ def stop_fail_pos(data_df):
     print(stop_fail_pos_df[["setting", "stop_fail_pos"]])
 
 
+def goal_in_range_not_took_end(x):
+    taken_actions = x["taken_actions"]
+    goal_in_range = x["goal_in_range"]
+    n_satisfy = len(
+        [i for i, j in zip(taken_actions, goal_in_range) if i != "End" and j]
+    )
+    n_goal_in_range = len([i for i in goal_in_range if i])
+    return 100 * float(n_satisfy / float(n_goal_in_range))
+
+
 def stop_fail_neg(data_df):
     """
-    Number of times the agent invokes an end action
+    Number of times the agent fails to invoke an end action
     when the goal is in range
     """
-    pass
+    sub_df = data_df[["setting", "success", "taken_actions", "goal_in_range"]]
+    sub_df["stop_fail_neg"] = sub_df.apply(
+        lambda x: goal_in_range_not_took_end(x), axis=1
+    )
+    stop_fail_neg_df = sub_df.groupby(["setting"], as_index=False)[
+        "stop_fail_neg"
+    ].mean()
+    print(stop_fail_neg_df[["setting", "stop_fail_neg"]])
 
 
 # def get_hist(x):
@@ -186,4 +203,5 @@ if __name__ == "__main__":
 
     # collision_stat(data_df)
     # min_dist_stat(data_df)
-    stop_fail_pos(data_df)
+    # stop_fail_pos(data_df)
+    stop_fail_neg(data_df)
