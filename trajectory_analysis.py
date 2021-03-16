@@ -113,6 +113,51 @@ def min_dist_stat(data_df):
     print(min_dist_df[["setting", "min_dist"]])
 
 
+def goal_out_range_took_end(x):
+    taken_actions = x["taken_actions"]
+    goal_in_range = x["goal_in_range"]
+    n_satisfy = len(
+        [i for i, j in zip(taken_actions, goal_in_range) if i == "End" and not j]
+    )
+    return n_satisfy
+
+
+def stop_fail_pos(data_df):
+    """
+    Number of times the agent invokes an end action
+    when the goal is not in range
+    """
+    # Try a global approach
+    sub_df = data_df[
+        ["setting", "success", "took_end_action", "taken_actions", "goal_in_range"]
+    ]
+    sub_df["stop_fail_pos"] = sub_df.apply(lambda x: goal_out_range_took_end(x), axis=1)
+    stop_fail_pos_df = (
+        sub_df.groupby(["setting"], as_index=False)["stop_fail_pos"].mean().round(2)
+    )
+    print(stop_fail_pos_df[["setting", "stop_fail_pos"]])
+
+
+def stop_fail_neg(data_df):
+    """
+    Number of times the agent invokes an end action
+    when the goal is in range
+    """
+    pass
+
+
+# def get_hist(x):
+#     hist, bins = np.histogram(x[""])
+
+# def succ_dist_curve_state(data_df):
+#     # Try a global approach
+#     sub_df = data_df[["setting", "success", "distance_to_target"]]
+#     min_dist = min(sub_df["distance_to_target"].to_list())
+#     max_dist = max(sub_df["distance_to_target"].to_list())
+#     bins = np.arange(min_dist, max_dist, 0.5)
+#     sub_df =
+
+
 if __name__ == "__main__":
     RES_DIR = {
         "pnav_rgb": "storage/robothor-pointnav-rgb-resnetgru-dppo-s2s-eval/metrics/Pointnav-RoboTHOR-Vanilla-RGB-ResNet-DDPPO",
@@ -141,4 +186,5 @@ if __name__ == "__main__":
     data_df, data = parse_results_to_df(RES_DIR[args.mode])
 
     # collision_stat(data_df)
-    min_dist_stat(data_df)
+    # min_dist_stat(data_df)
+    stop_fail_pos(data_df)
