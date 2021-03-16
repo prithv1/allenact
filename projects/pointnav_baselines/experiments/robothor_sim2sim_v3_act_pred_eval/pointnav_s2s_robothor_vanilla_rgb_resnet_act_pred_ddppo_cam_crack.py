@@ -469,7 +469,6 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
             seeds=seeds,
             deterministic_cudnn=deterministic_cudnn,
             include_expert_sensor=False,
-            allow_oversample=False,
         )
         res["scene_directory"] = self.TEST_DATASET_DIR
         res["loop_dataset"] = False
