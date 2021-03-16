@@ -124,6 +124,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    data_df, data = parse_results(RES_DIR[args.mode])
+    data_df, data = parse_results_to_df(RES_DIR[args.mode])
 
     collision_stat(data_df)
