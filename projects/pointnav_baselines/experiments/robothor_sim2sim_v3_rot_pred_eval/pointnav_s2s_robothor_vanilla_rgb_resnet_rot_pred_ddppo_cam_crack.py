@@ -221,7 +221,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
                 crop_height=self.CROP_HEIGHT,
                 crop_width=self.CROP_WIDTH,
                 color_jitter=color_jitter,
-                rotate=True,
+                # rotate=True,
             ),
             # DepthSensorThor(
             #     height=self.SCREEN_SIZE,
