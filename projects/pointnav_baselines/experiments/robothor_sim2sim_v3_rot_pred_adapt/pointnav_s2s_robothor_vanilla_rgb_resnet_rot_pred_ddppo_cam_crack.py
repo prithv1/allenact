@@ -172,6 +172,7 @@ class PointNavS2SRGBResNetDDPPO(ExperimentConfig, ABC):
             ),
             include_private_scenes=False,
             renderDepthImage=False,
+            camera_crack=True,
         )
 
     @classmethod
