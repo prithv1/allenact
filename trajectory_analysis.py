@@ -119,7 +119,7 @@ def goal_out_range_took_end(x):
     n_satisfy = len(
         [i for i, j in zip(taken_actions, goal_in_range) if i == "End" and not j]
     )
-    return n_satisfy
+    return 100 * n_satisfy
 
 
 def stop_fail_pos(data_df):
