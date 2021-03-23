@@ -98,7 +98,8 @@ def parse_results(search_dir):
 
     # Load all files
     df_index = []
-    for f in files:
+    for i in tqdm(range(len(files))):
+        f = files[i]
         res = json.load(open(f, "r"))[0]
         tasks = res["tasks"]
 
