@@ -154,6 +154,34 @@ def parse_results(search_dir):
     return data_df
 
 
+def parse_diff_res(data_df, difficulty="easy"):
+    sub_df = data_df[data_df["difficulty"] == difficulty]
+
+    mean_df = sub_df.groupby(["setting"], as_index=False)[metrics].mean().round(2)
+    sem_df = sub_df[["setting"] + metrics]
+    sem_df = sem_df.groupby(["setting"], as_index=True)
+    sem_df = sem_df.sem().round(2).reset_index()
+
+    # Mean rename dict
+    mean_rename = {k: k + "_mean" for k in metrics}
+    sem_rename = {k: k + "_sem" for k in metrics}
+    disp_names = ["success_mean", "success_sem", "spl_mean", "spl_sem"]
+
+    # Rename columns
+    mean_df = mean_df.rename(columns=mean_rename)
+    sem_df = sem_df.rename(columns=sem_rename)
+
+    # Merge data-frames
+    ov_df = pd.merge(mean_df, sem_df, on="setting")
+    # ov_df = ov_df.sort_index(ascending=True)
+
+    print("*" * 60)
+    print("Difficulty : ", difficulty)
+    print("*" * 60)
+    print(ov_df[["setting"] + disp_names].to_latex())
+    print("*" * 60)
+
+
 if __name__ == "__main__":
     RES_DIR = {
         "pnav_rgb": "storage/robothor-pointnav-rgb-resnetgru-dppo-s2s-ms-eval/metrics/Pointnav-RoboTHOR-Vanilla-RGB-ResNet-DDPPO",
@@ -176,4 +204,9 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    parse_results(RES_DIR[args.mode])
+    data_df = parse_results(RES_DIR[args.mode])
+
+    # Difficulty Breakdown
+    parse_diff_res(data_df, "easy")
+    parse_diff_res(data_df, "medium")
+    parse_diff_res(data_df, "hard")
