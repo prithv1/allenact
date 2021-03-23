@@ -52,7 +52,7 @@ SETTING_DICT = {
 }
 
 INDEX = [
-    # "Clean",
+    "Clean",
     "Motion Blur (S3)",
     "Motion Blur (S5)",
     "Lighting (S3)",
