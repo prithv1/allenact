@@ -156,7 +156,10 @@ def parse_results(search_dir):
 
 if __name__ == "__main__":
     RES_DIR = {
+        "pnav_rgb": "storage/robothor-pointnav-rgb-resnetgru-dppo-s2s-ms-eval/metrics/Pointnav-RoboTHOR-Vanilla-RGB-ResNet-DDPPO",
         "pnav_rgbd": "storage/robothor-pointnav-rgbd-resnetgru-dppo-s2s-ms-eval/metrics/Pointnav-RoboTHOR-Vanilla-RGBD-ResNet-DDPPO",
+        "onav_rgb": "storage/robothor-objectnav-rgb-resnetgru-dppo-s2s-ms-eval/metrics/Objectnav-RoboTHOR-Vanilla-RGB-ResNet-DDPPO",
+        "onav_rgbd": "storage/robothor-objectnav-rgbd-resnetgru-dppo-s2s-ms-eval/metrics/Objectnav-RoboTHOR-Vanilla-RGBD-ResNet-DDPPO",
     }
 
     parser = argparse.ArgumentParser(
