@@ -155,6 +155,7 @@ def parse_results(search_dir):
 
 
 def parse_diff_res(data_df, difficulty="easy"):
+    metrics = ["success", "spl"]
     sub_df = data_df[data_df["difficulty"] == difficulty]
 
     mean_df = sub_df.groupby(["setting"], as_index=False)[metrics].mean().round(2)
