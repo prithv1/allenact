@@ -113,6 +113,17 @@ def min_dist_stat(data_df):
     print(min_dist_df[["setting", "min_dist"]])
 
 
+# Distance to target at termination
+def term_dist_stat(data_df):
+    # Try a global approach
+    sub_df = data_df[["setting", "dist_to_target"]]
+    sub_df["term_dist"] = sub_df["dist_to_target"].apply(lambda x: np.min(x))
+    min_dist_df = (
+        sub_df.groupby(["setting"], as_index=False)["term_dist"].mean().round(2)
+    )
+    print(min_dist_df[["setting", "term_dist"]])
+
+
 def goal_out_range_took_end(x):
     taken_actions = x["taken_actions"]
     goal_in_range = x["goal_in_range"]
@@ -227,6 +238,10 @@ if __name__ == "__main__":
     print("Min-Dist Statistics")
     print("*" * 50)
     min_dist_stat(data_df)
+    print("*" * 50)
+    print("Term-Dist Statistics")
+    print("*" * 50)
+    term_dist_stat(data_df)
     print("*" * 50)
     print("Stop Fail (Pos) Statistics")
     print("*" * 50)
