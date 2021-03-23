@@ -117,7 +117,6 @@ def parse_results(search_dir):
                 res_set = v
                 break
         if res_set is None:
-            print(f)
             res_set = "Clean"
 
         for task in tasks:
@@ -133,6 +132,7 @@ def parse_results(search_dir):
     mean_df = data_df.groupby(["setting"], as_index=False)[metrics].mean()
     print(mean_df)
     sem_df = data_df[["setting"] + metrics]
+    print(sem_df)
     sem_df = sem_df.groupby(["setting"], as_index=False)[metrics].sem()
 
     # Mean rename dict
