@@ -128,6 +128,7 @@ def parse_results(search_dir):
     # Convert to data-frame
     data_df = pd.DataFrame(data)
     mean_df = data_df.groupby(["setting"], as_index=False)[metrics].mean()
+    print(mean_df)
     sem_df = data_df.groupby(["setting"], as_index=False)[metrics].sem()
 
     # Mean rename dict
