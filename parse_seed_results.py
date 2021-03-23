@@ -128,10 +128,10 @@ def parse_results(search_dir):
             task_dict["setting"] = res_set
             task_dict["seed"] = seed
             data.append(task_dict)
-            df_index.append(res_set)
+            # df_index.append(res_set)
 
     # Convert to data-frame
-    data_df = pd.DataFrame(data, index=[INDEX.index(x) for x in df_index])
+    data_df = pd.DataFrame(data)
     mean_df = data_df.groupby(["setting"], as_index=False)[metrics].mean().round(2)
     sem_df = data_df[["setting"] + metrics]
     sem_df = sem_df.groupby(["setting"], as_index=True)
@@ -148,7 +148,7 @@ def parse_results(search_dir):
 
     # Merge data-frames
     ov_df = pd.merge(mean_df, sem_df, on="setting")
-    ov_df = ov_df.sort_index(ascending=True)
+    # ov_df = ov_df.sort_index(ascending=True)
 
     print(ov_df[["setting"] + disp_names].to_latex())
     return data_df
