@@ -111,7 +111,8 @@ def parse_results(search_dir):
 
         res_set = None
         for k, v in SETTING_DICT.items():
-            if k in f and k + "_" not in f:
+            check_str = f.replace("_seed_" + seed, "")
+            if k in f and k + "_" not in check_str:
                 res_set = v
                 break
         if res_set is None:
