@@ -121,7 +121,8 @@ def parse_results(search_dir):
 
         for task in tasks:
             task_dict = {k: v for k, v in task.items() if k in metrics}
-            task_dict["success"] = float(task_dict["success"] == True)
+            task_dict["success"] = float(task_dict["success"] == True) * 100.0
+            task_dict["spl"] = task_dict["spl"] * 100.0
             task_dict["difficulty"] = task["task_info"]["difficulty"]
             task_dict["setting"] = res_set
             task_dict["seed"] = seed
@@ -129,12 +130,10 @@ def parse_results(search_dir):
 
     # Convert to data-frame
     data_df = pd.DataFrame(data)
-    mean_df = data_df.groupby(["setting"], as_index=False)[metrics].mean()
-    print(mean_df)
+    mean_df = data_df.groupby(["setting"], as_index=False)[metrics].mean().round(2)
     sem_df = data_df[["setting"] + metrics]
-    # sem_df = sem_df.groupby(["setting"], as_index=False)[metrics].sem()
     sem_df = sem_df.groupby(["setting"], as_index=True)
-    sem_df = sem_df.sem().reset_index()
+    sem_df = sem_df.sem()..round(2).reset_index()
 
     # Mean rename dict
     mean_rename = {k: k + "_mean" for k in metrics}
