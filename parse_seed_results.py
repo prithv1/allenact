@@ -116,6 +116,7 @@ def parse_results(search_dir):
                 res_set = v
                 break
         if res_set is None:
+            print(f)
             res_set = "Clean"
 
         for task in tasks:
