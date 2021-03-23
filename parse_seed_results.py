@@ -132,8 +132,9 @@ def parse_results(search_dir):
     mean_df = data_df.groupby(["setting"], as_index=False)[metrics].mean()
     print(mean_df)
     sem_df = data_df[["setting"] + metrics]
-    print(sem_df)
-    sem_df = sem_df.groupby(["setting"], as_index=False)[metrics].sem()
+    # sem_df = sem_df.groupby(["setting"], as_index=False)[metrics].sem()
+    sem_df = sem_df.groupby(["setting"], as_index=True)
+    sem_df = sem_df.sem().reset_index()
 
     # Mean rename dict
     mean_rename = {k: k + "_mean" for k in metrics}
