@@ -157,6 +157,7 @@ def filter_res_df(data_df, succ_thresh):
                 filter_ep.append(sub_df.T.to_dict().values())
 
     print(len(filter_ep))
+    return filter_ep
 
 
 if __name__ == "__main__":
@@ -182,7 +183,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    PNAV_THRESH = 600.0
+    PNAV_THRESH = 400.0
     ONAV_THRESH = 200.0
 
     if "pnav" in args.mode:
@@ -191,4 +192,6 @@ if __name__ == "__main__":
         THRESH = ONAV_THRESH
 
     data_df = parse_results_to_df(RES_DIR[args.mode])
-    filter_res_df(data_df, THRESH)
+    filter_ep = filter_res_df(data_df, THRESH)
+    # with open(args.mode + ".json", "w") as f:
+    #     json.dump(filter_ep, f)
