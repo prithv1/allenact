@@ -72,8 +72,7 @@ def parse_results_to_df(search_dir):
 
         res_set = None
         for k, v in SETTING_DICT.items():
-            check_str = f.replace("_seed_" + seed, "")
-            if k in f and k + "_" not in check_str:
+            if k in f and k + "_" not in f:
                 res_set = v
                 break
         if res_set is None:
