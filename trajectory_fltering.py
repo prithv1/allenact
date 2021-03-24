@@ -194,5 +194,5 @@ if __name__ == "__main__":
 
     data_df = parse_results_to_df(RES_DIR[args.mode])
     filter_ep = filter_res_df(data_df, THRESH)
-    # with open(args.mode + ".json", "w") as f:
-    #     json.dump(filter_ep, f)
+    with open(args.mode + ".json", "w") as f:
+        json.dump(filter_ep, f)
