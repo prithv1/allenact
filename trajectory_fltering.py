@@ -127,9 +127,10 @@ def filter_res_df(data_df, succ_thresh):
     ep_ids = data_df["id"].tolist()
     print("Looping over episode IDs")
     for i in tqdm(range(len(ep_ids))):
+        if i >= 300:
+            break
         ep_id = ep_ids[i]
         sub_df = data_df[data_df["id"] == ep_id]
-        print(sub_df)
         # Check clean success
         clean_succ = sub_df[sub_df["setting"] == "Clean"]["success"].tolist()[0]
         if clean_succ == 100.0:
