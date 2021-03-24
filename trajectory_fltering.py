@@ -183,7 +183,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    PNAV_THRESH = 400.0
+    PNAV_THRESH = 300.0
     ONAV_THRESH = 200.0
 
     if "pnav" in args.mode:
