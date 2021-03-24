@@ -155,7 +155,7 @@ def filter_res_df(data_df, succ_thresh):
             sum_succ = np.sum(rest_succ)
             if sum_succ <= succ_thresh:
                 if len(filter_ep) <= 20 * len(SUBSET_SEARCH):
-                    filter_ep.append(list(sub_df.T.to_dict().values()))
+                    filter_ep += list(sub_df.T.to_dict().values())
 
     print(len(filter_ep))
     return filter_ep
@@ -194,5 +194,5 @@ if __name__ == "__main__":
 
     data_df = parse_results_to_df(RES_DIR[args.mode])
     filter_ep = filter_res_df(data_df, THRESH)
-    with open(args.mode + ".json", "w") as f:
-        json.dump(filter_ep, f)
+    # with open(args.mode + ".json", "w") as f:
+    #     json.dump(filter_ep, f)
