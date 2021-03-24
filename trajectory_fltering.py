@@ -160,6 +160,8 @@ if __name__ == "__main__":
         help="Mode specifies the experimental setting",
     )
 
+    args = parser.parse_args()
+
     PNAV_THRESH = 400.0
     ONAV_THRESH = 200.0
 
