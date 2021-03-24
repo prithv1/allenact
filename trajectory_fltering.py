@@ -79,7 +79,9 @@ def parse_results_to_df(search_dir):
             res_set = "Clean"
 
         for task in tasks:
-            task_dict = {k: v for k, v in task.items() if k in metrics}
+            task_dict = {k: v for k, v in task.items() if k != "task_info"}
+            for k, v in task["task_info"].items():
+                task_dict[k] = v
             task_dict["success"] = float(task_dict["success"] == True) * 100.0
             task_dict["spl"] = task_dict["spl"] * 100.0
             task_dict["difficulty"] = task["task_info"]["difficulty"]
