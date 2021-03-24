@@ -85,7 +85,7 @@ def parse_results_to_df(search_dir):
             task_dict["success"] = float(task_dict["success"] == True) * 100.0
             task_dict["spl"] = task_dict["spl"] * 100.0
             task_dict["difficulty"] = task["task_info"]["difficulty"]
-            task_dict["corruption"] = res_set
+            task_dict["setting"] = res_set
             if res_set == "Clean":
                 task_dict["corruption"] = None
                 # task_dict["severity"] = None
@@ -129,10 +129,11 @@ def filter_res_df(data_df, succ_thresh):
     for i in tqdm(range(len(ep_ids))):
         ep_id = ep_ids[i]
         sub_df = data_df[data_df["id"] == ep_id]
+        print(sub_df)
         # Check clean success
-        clean_succ = sub_df[sub_df["corruption"] == "Clean"]["success"].tolist()[0]
+        clean_succ = sub_df[sub_df["setting"] == "Clean"]["success"].tolist()[0]
         if clean_succ == 100.0:
-            rest_succ = sub_df[sub_df["corruption"] != "Clean"]["success"].tolist()
+            rest_succ = sub_df[sub_df["setting"] != "Clean"]["success"].tolist()
             sum_succ = np.sum(rest_succ)
             if sum_succ <= succ_thresh:
                 filter_ep.append(sub_df.T.to_dict().values())
