@@ -58,6 +58,22 @@ INDEX = [
     "Spt. + Drift",
 ]
 
+SUBSET_SEARCH = [
+    "Clean",
+    "Motion Blur",
+    "Lighting",
+    "Defocus Blur",
+    "Spatter",
+    "Speckle Noise",
+    "D.B. + M.B. (S)",
+    "S.N. + M.B. (S)",
+    "Spt. + M.B. (S)",
+    "D.B. + Drift",
+    "S.N. + Drift",
+    "Spt. + Drift",
+]
+
+
 # Flatten and store all the results in one dataframe
 def parse_results_to_df(search_dir):
     # Get all the json files
@@ -123,12 +139,13 @@ def filter_res_df(data_df, succ_thresh):
     - We want to group by IDs and check for this
     """
     filter_ep = []
+    data_df = data_df[data_df["setting"].isin(SUBSET_SEARCH)]
     # Episode IDs
     ep_ids = data_df["id"].tolist()
     print("Looping over episode IDs")
     for i in tqdm(range(len(ep_ids))):
-        if i >= 300:
-            break
+        # if i >= 300:
+        #     break
         ep_id = ep_ids[i]
         sub_df = data_df[data_df["id"] == ep_id]
         # Check clean success
@@ -165,7 +182,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    PNAV_THRESH = 400.0
+    PNAV_THRESH = 600.0
     ONAV_THRESH = 200.0
 
     if "pnav" in args.mode:
