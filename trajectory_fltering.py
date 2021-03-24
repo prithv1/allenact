@@ -187,12 +187,14 @@ if __name__ == "__main__":
     PNAV_THRESH = 200.0
     ONAV_THRESH = 200.0
 
-    if "pnav" in args.mode:
-        THRESH = PNAV_THRESH
-    else:
-        THRESH = ONAV_THRESH
+    THRESH = {
+        "pnav_rgb": 200.0,
+        "pnav_rgbd": 600.0,
+        "onav_rgb": 200.0,
+        "onav_rgbd": 200.0,
+    }
 
     data_df = parse_results_to_df(RES_DIR[args.mode])
-    filter_ep = filter_res_df(data_df, THRESH)
+    filter_ep = filter_res_df(data_df, THRESH[args.mode])
     with open(args.mode + ".json", "w") as f:
         json.dump(filter_ep, f)
