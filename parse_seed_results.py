@@ -102,33 +102,36 @@ def parse_results(search_dir):
     df_index = []
     for i in tqdm(range(len(files))):
         f = files[i]
-        res = json.load(open(f, "r"))[0]
-        tasks = res["tasks"]
+        try:
+            res = json.load(open(f, "r"))[0]
+            tasks = res["tasks"]
 
-        seed = None
-        for sd in SEEDS:
-            if sd in f:
-                seed = sd
-                break
+            seed = None
+            for sd in SEEDS:
+                if sd in f:
+                    seed = sd
+                    break
 
-        res_set = None
-        for k, v in SETTING_DICT.items():
-            check_str = f.replace("_seed_" + seed, "")
-            if k in f and k + "_" not in check_str:
-                res_set = v
-                break
-        if res_set is None:
-            res_set = "Clean"
+            res_set = None
+            for k, v in SETTING_DICT.items():
+                check_str = f.replace("_seed_" + seed, "")
+                if k in f and k + "_" not in check_str:
+                    res_set = v
+                    break
+            if res_set is None:
+                res_set = "Clean"
 
-        for task in tasks:
-            task_dict = {k: v for k, v in task.items() if k in metrics}
-            task_dict["success"] = float(task_dict["success"] == True) * 100.0
-            task_dict["spl"] = task_dict["spl"] * 100.0
-            task_dict["difficulty"] = task["task_info"]["difficulty"]
-            task_dict["setting"] = res_set
-            task_dict["seed"] = seed
-            data.append(task_dict)
-            # df_index.append(res_set)
+            for task in tasks:
+                task_dict = {k: v for k, v in task.items() if k in metrics}
+                task_dict["success"] = float(task_dict["success"] == True) * 100.0
+                task_dict["spl"] = task_dict["spl"] * 100.0
+                task_dict["difficulty"] = task["task_info"]["difficulty"]
+                task_dict["setting"] = res_set
+                task_dict["seed"] = seed
+                data.append(task_dict)
+                # df_index.append(res_set)
+        except:
+            continue
 
     # Convert to data-frame
     data_df = pd.DataFrame(data)
